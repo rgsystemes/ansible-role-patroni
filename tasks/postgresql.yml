@@ -1,0 +1,49 @@
+---
+
+- name: PostgreSQL | Add PostgreSQL repository
+  block:
+    - name: PostgreSQL | Add repository apt-key
+      ansible.builtin.apt_key:
+        url: postgresql_apt_repository_keys
+        state: present
+
+    - name: PostgreSQL | Add repository
+      ansible.builtin.apt_repository:
+        repo: postgresql_apt_repository
+        state: present
+        update_cache: true
+  tags: ['postgresql']
+
+- name: PostgreSQL | Prepare PostgreSQL for install
+  block:
+    - name: PostgreSQL | Install postgresql-common
+      ansible.builtin.apt:
+        name: postgresql-common
+        state: present
+      register: apt_status
+      until: apt_status is success
+      delay: 5
+      retries: 3
+
+    - name: PostgreSQL | Disable initializing of a default postgresql cluster
+      ansible.builtin.replace:
+        path: /etc/postgresql-common/createcluster.conf
+        replace: create_main_cluster = false
+        regexp: ^#?create_main_cluster.*$
+
+    - name: PostgreSQL | Disable log rotation with logrotate for postgresql
+      ansible.builtin.file:
+        dest: /etc/logrotate.d/postgresql-common
+        state: absent
+  tags: ['postgresql']
+
+- name: PostgreSQL | Install PostgreSQL packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ postgresql_packages }}"
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
+  tags: ['postgresql']

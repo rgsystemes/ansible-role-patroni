@@ -1,0 +1,66 @@
+---
+
+- name: Hostname | Change hostname
+  include_tasks: hostname.yml
+  tags: ['hostname']
+
+- name: Apt | Install packages
+  include_tasks: apt.yml
+  tags: ['apt']
+
+- name: Etcd | Install etcd
+  include_tasks: etcd.yml
+  when: not dcs_exists|bool
+  tags: ['etcd']
+
+- name: PostgreSQL | Install PosgreSQL
+  include_tasks: postgresql.yml
+  tags: ['postgresql']
+
+- name: Swap | Manage swap
+  include_tasks: swap.yml
+  tags: ['swap']
+
+- name: Sysctl | Manage Sysctl for PostgreSQL
+  include_tasks: sysctl.yml
+  tags: ['sysctl']
+
+- name: THP | Disable Transparent Huge Pages
+  include_tasks: thp.yml
+  tags: ['thp']
+
+- name: PAM | Manage PAM limits
+  include_tasks: pam.yml
+  tags: ['pam']
+
+- name: IO Scheduler | Manage IO Scheduler
+  include_tasks: ioscheduler.yml
+  tags: ['ioscheduler']
+
+- name: Locales | Manage locales
+  include_tasks: locales.yml
+  tags: ['locales']
+
+- name: Auth | Manage authentications & SSH keys
+  include_tasks: auth.yml
+  tags: ['auth']
+
+- name: HAProxy | Install HAProxy
+  include_tasks: haproxy.yml
+  tags: ['haproxy']
+
+- name: Confd | Install Confd
+  include_tasks: confd.yml
+  tags: ['confd']
+
+- name: KeepAlived | Install KeepAlived
+  include_tasks: keepalived.yml
+  tags: ['keepalived']
+
+- name: PGBouncer | Install PGBouncer
+  include_tasks: pgbouncer.yml
+  tags: ['pgbouncer']
+
+- name: Patroni | Install Patroni
+  include_tasks: patroni.yml
+  tags: ['patroni']

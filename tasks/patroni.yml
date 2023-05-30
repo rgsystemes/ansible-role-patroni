@@ -1,0 +1,56 @@
+---
+
+- name: Patroni | Install Patroni
+  block:
+    - name: Copy patroni requirements.txt file
+      ansible.builtin.copy:
+        src: requirements.txt
+        dest: /tmp/requirements.txt
+      when: patroni_pip_requirements_repo | length < 1
+
+    - name: Install setuptools
+      pip:
+        name: setuptools<66.0.0  # https://github.com/pypa/setuptools/issues/3772
+        state: latest
+        executable: pip3
+        extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
+        umask: "0022"
+      environment:
+        PATH: "{{ ansible_env.PATH }}:/usr/local/bin:/usr/bin"
+      when: patroni_pip_requirements_repo | length < 1
+
+    - name: Install requirements
+      pip:
+        requirements: /tmp/requirements.txt
+        executable: pip3
+        extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
+        umask: "0022"
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ postgresql_bin_dir }}:/usr/local/bin:/usr/bin"
+      when: patroni_pip_requirements_repo | length < 1
+
+    - name: Install patroni
+      pip:
+        name: patroni
+        state: latest
+        executable: pip3
+        extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
+        umask: "0022"
+      environment:
+        PATH: "{{ ansible_env.PATH }}:/usr/local/bin:/usr/bin"
+      when: patroni_pip_package_repo | length < 1 and patroni_install_version == "latest"
+
+    - name: "Install patroni {{ patroni_install_version }}"
+      pip:
+        name: "patroni=={{ patroni_install_version }}"
+        executable: pip3
+        extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
+        umask: "0022"
+      environment:
+        PATH: "{{ ansible_env.PATH }}:/usr/local/bin:/usr/bin"
+      when: patroni_pip_package_repo | length < 1 and patroni_install_version != "latest"
+  when: installation_method == "repo" and patroni_installation_method == "pip"
+  environment: "{{ proxy_env | default({}) }}"
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tags: patroni, patroni_install

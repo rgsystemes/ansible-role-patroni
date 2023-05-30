@@ -1,0 +1,78 @@
+---
+
+- name: Start disable-transparent-huge-pages service
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: disable-transparent-huge-pages
+    state: restarted
+    enabled: true
+  listen: "restart disable-thp"
+
+- name: Start io-scheduler service
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: io-scheduler
+    state: restarted
+    enabled: true
+  listen: "restart io-scheduler"
+
+- name: Restart haproxy service
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: haproxy
+    enabled: true
+    state: restarted
+  listen: "restart haproxy"
+
+- name: Check HAProxy is started and accepting connections
+  ansible.builtin.wait_for:
+    port: "{{ haproxy_listen_port.stats }}"
+    host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
+    state: started
+    timeout: 120
+    delay: 10
+  ignore_errors: false
+  listen: "restart haproxy"
+
+- name: Restart confd service
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: confd
+    enabled: true
+    state: restarted
+  listen: "restart confd"
+
+- name: Restart keepalived service
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: keepalived
+    enabled: true
+    state: restarted
+  listen: "restart keepalived"
+
+- name: Wait for the cluster ip address (VIP) "{{ cluster_vip }}" is running
+  ansible.builtin.wait_for:
+    host: "{{ cluster_vip }}"
+    port: "{{ ansible_ssh_port | default(22) }}"
+    state: started
+    timeout: 60
+    delay: 2
+  listen: "restart keepalived"
+
+- name: Restart pgbouncer service
+  systemd:
+    daemon_reload: true
+    name: pgbouncer
+    enabled: true
+    state: restarted
+  listen: "restart pgbouncer"
+
+- name: Wait for port "{{ pgbouncer_listen_port }}" to become open on the host
+  wait_for:
+    port: "{{ pgbouncer_listen_port }}"
+    host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
+    state: started
+    timeout: 120
+    delay: 5
+  ignore_errors: false
+  listen: "restart pgbouncer"

@@ -1,0 +1,27 @@
+---
+
+- name: Apt | Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
+  tags: ['apt']
+
+- name: Apt | Install packages
+  ansible.builtin.apt:
+    pkg:
+      # All
+      - gnupg
+      - apt-transport-https
+      - iproute2
+      # PostgreSQL
+      - python3-psycopg2
+    state: present
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
+  tags: ['apt']

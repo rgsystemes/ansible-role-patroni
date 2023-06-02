@@ -64,3 +64,11 @@
 - name: Patroni | Install Patroni
   include_tasks: patroni.yml
   tags: ['patroni']
+
+- name: PGBouncer | Configure PGBouncer
+  include_tasks: config_pgbouncer.yml
+  tags: ['config_pgbouncer']
+
+- name: END | Deploy Finish
+  include_tasks: deploy_finish.yml
+  tags: ['finish']

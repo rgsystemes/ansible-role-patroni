@@ -1,0 +1,23 @@
+---
+
+galaxy_info:
+  role_name: ansible-role-patroni
+  description: PostgreSQL High-Availability Cluster based on Patroni
+  namespace: rgsystemes
+  author: Floriane FATIEN (floriane.fatien@rgsystem.com)
+  license: MIT
+
+  min_ansible_version: 2.7
+
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+  galaxy_tags:
+    - postgresql
+    - patroni
+    - etcd
+    - confd
+    - haproxy
+
+dependencies: []

@@ -2,14 +2,14 @@
 
 - name: Patroni | Install Patroni
   block:
-    - name: Copy patroni requirements.txt file
+    - name: Patroni | Copy patroni requirements.txt file
       ansible.builtin.copy:
         src: requirements.txt
         dest: /tmp/requirements.txt
 
-    - name: Install setuptools
+    - name: Patroni | Install setuptools
       ansible.builtin.pip:
-        name: setuptools<66.0.0  # https://github.com/pypa/setuptools/issues/3772
+        name: setuptools<66.0.0
         state: latest
         executable: pip3
         extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
@@ -17,7 +17,7 @@
       environment:
         PATH: "{{ ansible_env.PATH }}:/usr/local/bin:/usr/bin"
 
-    - name: Install requirements
+    - name: Patroni | Install requirements
       ansible.builtin.pip:
         requirements: /tmp/requirements.txt
         executable: pip3
@@ -26,7 +26,7 @@
       environment:
         PATH: "{{ ansible_env.PATH }}:{{ postgresql_bin_dir }}:/usr/local/bin:/usr/bin"
 
-    - name: "Install patroni {{ patroni_install_version }}"
+    - name: "Patroni | Install patroni {{ patroni_install_version }}"
       ansible.builtin.pip:
         name: "patroni=={{ patroni_install_version }}"
         executable: pip3
@@ -39,28 +39,27 @@
     ansible_python_interpreter: /usr/bin/python3
   tags: ['patroni']
 
-# Patroni configure
-- name: Create conf directory
+- name: Patroni | Create conf directory
   ansible.builtin.file:
-    path: /etc/patroni
+    path: "{{ patroni_conf_dir }}"
     state: directory
     owner: postgres
     group: postgres
     mode: 0750
   tags: ['patroni']
 
-- name: Generate conf file "/etc/patroni/patroni.yml"
+- name: Patroni | Generate conf file "{{ patroni_conf_dir }}/patroni.yml"
   ansible.builtin.template:
-    src: templates/patroni.yml.j2
-    dest: /etc/patroni/patroni.yml
+    src: patroni.yml.j2
+    dest: "{{ patroni_conf_dir }}/patroni.yml"
     owner: postgres
     group: postgres
     mode: 0640
   when: existing_pgcluster is not defined or not existing_pgcluster|bool
   tags: ['patroni']
 
-- name: Create patroni log directory
-  file:
+- name: Patroni | Create patroni log directory
+  ansible.builtin.file:
     path: "{{ patroni_log_dir }}"
     owner: postgres
     group: postgres
@@ -69,17 +68,18 @@
   when: patroni_log_destination == 'logfile'
   tags: ['patroni']
 
-- block:  # for add_pgnode.yml
-    - name: Fetch patroni.yml conf file from master
+- name: Patroni | Add only one Patroni node | add_pgnode.yml
+  block:
+    - name: Patroni | Fetch patroni.yml conf file from master
       run_once: true
       ansible.builtin.fetch:
         src: /etc/patroni/patroni.yml
         dest: files/patroni.yml
         validate_checksum: true
         flat: true
-      delegate_to: "{{ groups.master[0] }}"
+      when: is_master is defined and is_master|bool
 
-    - name: Copy patroni.yml conf file to replica
+    - name: Patroni | Copy patroni.yml conf file to replica
       ansible.builtin.copy:
         src: files/patroni.yml
         dest: /etc/patroni/patroni.yml
@@ -87,14 +87,14 @@
         group: postgres
         mode: 0640
 
-    - name: Remove patroni.yml conf files from localhost
+    - name: Patroni | Remove patroni.yml conf files from localhost
       run_once: true
       ansible.builtin.file:
         path: files/patroni.yml
         state: absent
       delegate_to: localhost
 
-    - name: Prepare patroni.yml conf file (replace "name","listen","connect_address")
+    - name: Patroni | Prepare patroni.yml conf file (replace "name","listen","connect_address")
       ansible.builtin.lineinfile:
         path: /etc/patroni/patroni.yml
         regexp: "{{ item.regexp }}"
@@ -110,7 +110,7 @@
         label: "{{ item.line }}"
       when: with_haproxy_load_balancing|bool or pgbouncer_install|bool or (cluster_vip is not defined or cluster_vip | length < 1)
 
-    - name: Prepare patroni.yml conf file (replace "name","listen","connect_address")
+    - name: Patroni | Prepare patroni.yml conf file (replace "name","listen","connect_address")
       ansible.builtin.lineinfile:
         path: /etc/patroni/patroni.yml
         regexp: "{{ item.regexp }}"
@@ -128,9 +128,9 @@
   when: existing_pgcluster is defined and existing_pgcluster|bool
   tags: ['patroni']
 
-- name: Copy systemd service file "/etc/systemd/system/patroni.service"
+- name: Patroni | Copy systemd service file "/etc/systemd/system/patroni.service"
   ansible.builtin.template:
-    src: templates/patroni.service.j2
+    src: patroni.service.j2
     dest: /etc/systemd/system/patroni.service
     owner: postgres
     group: postgres
@@ -161,15 +161,6 @@
     - postgresql_version is version('14', '<=')
   tags: ['patroni']
 
-- name: Prepare PostgreSQL | make sure the postgresql log directory "{{ postgresql_log_dir }}" exists
-  ansible.builtin.file:
-    path: "{{ postgresql_log_dir }}"
-    owner: postgres
-    group: postgres
-    state: directory
-    mode: 0700
-  tags: ['patroni']
-
 - name: Prepare PostgreSQL | make sure the custom WAL directory "{{ postgresql_wal_dir }}" exists
   ansible.builtin.file:
     path: "{{ postgresql_wal_dir }}"
@@ -180,37 +171,30 @@
   when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
   tags: ['patroni']
 
-- block:  # wheh postgresql NOT exists or PITR
-    - name: Prepare PostgreSQL | make sure PostgreSQL data directory "{{ postgresql_data_dir }}" exists
-      ansible.builtin.file:
-        path: "{{ postgresql_data_dir }}"
-        owner: postgres
-        group: postgres
-        state: directory
-        mode: 0700
-
+- name: Prepare PostgreSQL | When PostgreSQL does not exist
+  block:
     - name: Prepare PostgreSQL | check that data directory "{{ postgresql_data_dir }}" is not initialized
-      ansible.builtin.stat:
+      stat:
         path: "{{ postgresql_data_dir }}/PG_VERSION"
       register: pgdata_initialized
       when: patroni_cluster_bootstrap_method == "initdb"
 
     - name: Prepare PostgreSQL | data directory check result
-      ansible.builtin.fail:
+      fail:
         msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized"
       when: pgdata_initialized.stat.exists is defined and
             pgdata_initialized.stat.exists
+      tags: patroni, patroni_check_init
 
     - name: Prepare PostgreSQL | make sure the postgresql config files exists
-      ansible.builtin.stat:
+      stat:
         path: "{{ postgresql_conf_dir }}/postgresql.conf"
       register: postgresql_conf_file
-      when: postgresql_packages|join(" ") is not search("postgrespro")
 
     - name: Prepare PostgreSQL | generate default postgresql config files
       become: true
       become_user: postgres
-      ansible.builtin.command: >
+      command: >
         /usr/bin/pg_createcluster {{ postgresql_version }} {{ postgresql_cluster_name }}
         -d {{ postgresql_data_dir }}
         -p {{ postgresql_port }}
@@ -218,11 +202,10 @@
         --locale {{ postgresql_locale }}
       register: pg_createcluster_result
       failed_when: pg_createcluster_result.rc != 0
-      when: postgresql_packages|join(" ") is not search("postgrespro") and
-            not postgresql_conf_file.stat.exists
+      when: not postgresql_conf_file.stat.exists
 
     - name: Prepare PostgreSQL | make sure the data directory "{{ postgresql_data_dir }}" is empty
-      ansible.builtin.file:
+      file:
         path: "{{ postgresql_data_dir }}"
         state: "{{ item }}"
         owner: postgres
@@ -231,11 +214,10 @@
       loop:
         - absent
         - directory
-      when: (is_master == "true" and patroni_cluster_bootstrap_method != "pgbackrest")
-            or (is_master != "true" and 'pgbackrest' not in patroni_create_replica_methods)  # --delta restore
+      when: is_master is defined and is_master|bool
 
     - name: Prepare PostgreSQL | make sure the custom WAL directory "{{ postgresql_wal_dir }}" is empty
-      ansible.builtin.file:
+      file:
         path: "{{ postgresql_wal_dir }}"
         state: "{{ item }}"
         owner: postgres
@@ -245,12 +227,12 @@
         - absent
         - directory
       when: (postgresql_wal_dir is defined and postgresql_wal_dir | length > 0) and
-            ((is_master == "true" and patroni_cluster_bootstrap_method != "pgbackrest")
-              or (is_master != "true" and 'pgbackrest' not in patroni_create_replica_methods))
+            (is_master is defined and is_master|bool)
   when: postgresql_exists != "true" or patroni_cluster_bootstrap_method != "initdb"
   tags: ['patroni']
 
-- block:  # when postgresql exists
+- name: Prepare PostgreSQL | When PostgreSQL does exist
+  block:
     - name: Prepare PostgreSQL | check that data directory "{{ postgresql_data_dir }}" is initialized
       ansible.builtin.stat:
         path: "{{ postgresql_data_dir }}/PG_VERSION"
@@ -261,7 +243,8 @@
         msg: "Whoops! data directory {{ postgresql_data_dir }} is not initialized"
       when: not pgdata_initialized.stat.exists
 
-    - block:  # for master only
+    - name: Prepare PostgreSQL | Check PostgreSQL on master
+      block:
         - name: Prepare PostgreSQL | check PostgreSQL is started on Master
           become: true
           become_user: postgres
@@ -330,7 +313,7 @@
             state: present
           become: true
           become_user: postgres
-      when: is_master == "true"
+      when: is_master is defined and is_master|bool
 
     - name: Prepare PostgreSQL | check PostgreSQL is started
       become: true
@@ -352,7 +335,6 @@
       delay: 10
       when: pg_ctl_status_result.rc == 0
 
-      # "Debian"
     - name: Prepare PostgreSQL | stop PostgreSQL (will be managed by patroni)
       become: true
       become_user: postgres
@@ -370,15 +352,16 @@
   when: postgresql_exists == "true" and patroni_cluster_bootstrap_method == "initdb"
   tags: ['patroni']
 
-- block:  # start patroni on master
-    - name: Start patroni service on the Master server
+- name: Patroni | Start Patroni on master
+  block:
+    - name: Patroni | Start patroni service on the Master server
       ansible.builtin.systemd:
         daemon_reload: true
         name: patroni
         state: restarted
         enabled: true
 
-    - name: "Wait for port {{ patroni_restapi_port }} to become open on the host"
+    - name: "Patroni | Wait for port {{ patroni_restapi_port }} to become open on the host"
       ansible.builtin.wait_for:
         port: "{{ patroni_restapi_port }}"
         host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
@@ -387,7 +370,7 @@
         delay: 10
       ignore_errors: false
 
-    - name: Check PostgreSQL is started and accepting connections on Master
+    - name: Patroni | Check PostgreSQL is started and accepting connections on Master
       become: true
       become_user: postgres
       ansible.builtin.command: "{{ postgresql_bin_dir }}/pg_isready -p {{ postgresql_port }}"
@@ -397,7 +380,7 @@
       delay: 30
       changed_when: false
 
-    - name: Wait for the cluster to initialize (master is the leader with the lock)
+    - name: Patroni | Wait for the cluster to initialize (master is the leader with the lock)
       ansible.builtin.uri:
         url: "http://{{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ patroni_restapi_port }}/leader"
         status_code: 200
@@ -406,26 +389,27 @@
       retries: 10
       delay: 2
       when: patroni_standby_cluster.host is not defined or patroni_standby_cluster.host | length < 1
-  when: is_master == "true"
+  when: is_master is defined and is_master|bool
   tags: ['patroni']
 
-- block:  # pg_hba (using a templates/pg_hba.conf.j2)
-    - name: Prepare PostgreSQL | generate pg_hba.conf
-      template:
-        src: templates/pg_hba.conf.j2
+- name: Prepare PostgreSQL | Generate pg_hba.conf when PostgreSQL does not exist
+  block:
+    - name: Prepare PostgreSQL | Generate pg_hba.conf
+      ansible.builtin.template:
+        src: pg_hba.conf.j2
         dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
         owner: postgres
         group: postgres
         mode: 0640
       register: generate_pg_hba
-      when: is_master == "true" or
-            ((is_master != "true" and postgresql_conf_dir != postgresql_data_dir)
+      when: (is_master is defined and is_master|bool) or
+            ((is_master is undefined and postgresql_conf_dir != postgresql_data_dir)
             or postgresql_exists == "true")
 
     - name: Prepare PostgreSQL | reload for apply the pg_hba.conf
       become: true
       become_user: postgres
-      command: "{{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -c 'SELECT pg_reload_conf()'"
+      ansible.builtin.command: "{{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -c 'SELECT pg_reload_conf()'"
       register: psql_reload_result
       changed_when: psql_reload_result.rc == 0
       failed_when: false  # exec pg_reload_conf on all running postgres (to re-run with --tag pg_hba).
@@ -433,18 +417,19 @@
   when: existing_pgcluster is not defined or not existing_pgcluster|bool
   tags: ['patroni']
 
-- block:  # for add_pgnode.yml
+- name: Prepare PostgreSQL | Add only one Patroni node | add_pgnode.yml
+  block:
     - name: Prepare PostgreSQL | fetch pg_hba.conf file from master
       run_once: true
-      fetch:
+      ansible.builtin.fetch:
         src: "{{ postgresql_conf_dir }}/pg_hba.conf"
         dest: files/pg_hba.conf
         validate_checksum: true
         flat: true
-      delegate_to: "{{ groups.master[0] }}"
+      when: is_master is defined and is_master|bool
 
     - name: Prepare PostgreSQL | copy pg_hba.conf file to replica
-      copy:
+      ansible.builtin.copy:
         src: files/pg_hba.conf
         dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
         owner: postgres
@@ -454,16 +439,17 @@
         and postgresql_conf_dir != postgresql_data_dir
   tags: ['patroni']
 
-- block:  # start patroni on replica
-    - name: Start patroni service on Replica servers
-      systemd:
+- name: Patroni | Start Patroni on replicas
+  block:
+    - name: Patroni | Start patroni service on Replica servers
+      ansible.builtin.systemd:
         daemon_reload: true
         name: patroni
         state: restarted
         enabled: true
 
-    - name: "Wait for port {{ patroni_restapi_port }} to become open on the host"
-      wait_for:
+    - name: Patroni | "Wait for port {{ patroni_restapi_port }} to become open on the host"
+      ansible.builtin.wait_for:
         port: "{{ patroni_restapi_port }}"
         host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
         state: started
@@ -471,24 +457,25 @@
         delay: 10
       ignore_errors: false
 
-    - name: Check that the patroni is healthy on the replica server
-      uri:
+    - name: Patroni | Check that the patroni is healthy on the replica server
+      ansible.builtin.uri:
         url: "http://{{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ patroni_restapi_port }}/health"
         status_code: 200
       register: replica_result
       until: replica_result.status == 200
-      retries: 1200  # timeout 10 hours
+      retries: 1200 
       delay: 30
-  when: is_master != "true"
+  when: is_master is not defined or not is_master|bool
   tags: ['patroni']
 
-# create symlink pg_xlog/pg_wal to custom WAL dir
-- import_tasks: custom_wal_dir.yml
+- name: WAL | Configure a custom WAL
+  import_tasks: custom_wal_dir.yml
   when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
   tags: ['patroni']
 
-- block:
-    - name: Turning off postgresql autostart from config "start.conf" (will be managed by patroni)
+- name: PostgreSQL | Disable postgresql from autostart
+  block:
+    - name: PostgreSQL | Turning off postgresql autostart from config "start.conf" (will be managed by patroni)
       copy:
         dest: "{{ postgresql_conf_dir }}/start.conf"
         content: "manual"
@@ -496,15 +483,15 @@
         group: postgres
         mode: 0644
 
-    - name: Disable "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}" service
+    - name: PostgreSQL | Disable "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}" service
       systemd:
         name: "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}"
         enabled: false
         daemon_reload: true
   tags: ['patroni']
 
-- name: Add PATRONICTL_CONFIG_FILE environment variable into /etc/environment
-  lineinfile:
+- name: Patroni | Add PATRONICTL_CONFIG_FILE environment variable into /etc/environment
+  ansible.builtin.lineinfile:
     dest: "/etc/environment"
     state: present
     regexp: "^PATRONICTL_CONFIG_FILE"

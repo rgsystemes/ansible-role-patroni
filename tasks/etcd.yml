@@ -1,76 +1,43 @@
 ---
+
 - name: Etcd | Install etcd packages
-  block: 
-    - name: Etcd | Download "etcd" package
-      ansible.builtin.get_url:
-        url: "{{ etcd_package_repo }}"
-        dest: /tmp/
-        timeout: 60
-        validate_certs: false
-
-    - name: Etcd | Extract "etcd" into /tmp
-      ansible.builtin.unarchive:
-        src: "/tmp/{{ etcd_package_repo | basename }}"
-        dest: /tmp/
-        # extra_opts:
-        #   - --no-same-owner
-        remote_src: true
-
-    - name: Etcd | Copy "etcd" and "etcdctl" binary files to /usr/local/bin/
-      ansible.builtin.copy:
-        src: "/tmp/{{ etcd_package_repo.split('.tar.gz')[0] | basename }}/{{ item }}"
-        dest: /usr/local/bin/
-        mode: u+x,g+x,o+x
-        remote_src: true
-      loop:
-        - etcd
-        - etcdctl
+  ansible.builtin.apt:
+    name: "{{ etcd_version }}"
+    state: present
+  register: etcd_status
+  until: etcd_status is success
+  delay: 5
+  retries: 3
   tags: ['etcd']
 
-  - name: Etcd | Add etcd user
-  ansible.builtin.user:
-    name: etcd
-    shell: /usr/sbin/nologin
-    home: "{{ etcd_data_dir }}"
-  tags: ['etcd']
-
-# Optimize ????
 - name: Etcd | Create etcd configuration directory
   ansible.builtin.file:
     path: "{{ etcd_conf_dir }}"
     state: directory
     owner: root
     group: root
-    mode: 0755
-  tags: ['etcd']
-
-- name: Etcd | Create etcd data directory
-  ansible.builtin.file:
-    path: "{{ etcd_data_dir }}"
-    state: directory
-    owner: etcd
-    group: etcd
-    mode: 0700
+    mode: 0750
   tags: ['etcd']
 
 - name: Etcd | Generate conf file "/etc/etcd/etcd.conf"
   ansible.builtin.template:
-    src: templates/etcd.conf.j2
-    dest: /etc/etcd/etcd.conf
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
     owner: root
     group: root
     mode: 0644
+  loop:
+    - src: etcd.conf.j2
+      dest: /etc/etcd/etcd.conf
+    - src: etcd.service.j2
+      dest: /etc/systemd/system/etcd.service
   tags: ['etcd']
 
-- name: Etcd | Copy systemd service file
-  ansible.builtin.template:
-    src: templates/etcd.service.j2
-    dest: /etc/systemd/system/etcd.service
-    owner: root
-    group: root
-    mode: 0644
+- name: Etcd | Stop etcd service
+  ansible.builtin.systemd:
+    name: etcd
+    state: stopped
   tags: ['etcd']
-###
 
 - name: Etcd | Enable and start etcd service
   ansible.builtin.systemd:
@@ -85,7 +52,7 @@
     port: 2379
     host: 127.0.0.1
     state: started
-    timeout: 120
+    timeout: 60
     delay: 10
   ignore_errors: false
   tags: ['etcd']
@@ -93,16 +60,16 @@
 - name: Etcd | Check etcd cluster health
   block:
     - name: Etcd | Wait until the etcd cluster is healthy
-      ansible.builtin.command: |
-        /usr/local/bin/etcdctl endpoint health --endpoints=http://{{ inventory_hostname }}:2379
+      ansible.builtin.shell: |
+        ETCDCTL_API=3 /usr/bin/etcdctl endpoint health --endpoints=http://{{ inventory_hostname }}:2379
       register: etcd_health_result
-      until: "'is healthy' in etcd_health_result.stdout"
-      retries: 10
+      until: "'is healthy' in etcd_health_result.stderr"
+      retries: 5
       delay: 10
       changed_when: false
       ignore_errors: false
 
     - name: Etcd | Display cluster health
-      debug:
-        msg: "{{ etcd_health_result.stdout }}"
+      ansible.builtin.debug:
+        msg: "{{ etcd_health_result.stderr }}"
   tags: ['etcd']

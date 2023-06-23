@@ -1,29 +1,29 @@
 ---
 
 - block:
-    - name: Check postgresql cluster health
+    - name: Info | Check postgresql cluster health
       run_once: true
       become: true
       become_user: postgres
-      command: patronictl -c /etc/patroni/patroni.yml list
+      ansible.builtin.command: patronictl -c /etc/patroni/patroni.yml list
       register: patronictl_result
       environment:
         PATH: "{{ ansible_env.PATH }}:/usr/bin:/usr/local/bin"
       changed_when: false
 
-    - name: PostgreSQL Cluster health
+    - name: Info | PostgreSQL Cluster health
       run_once: true
-      debug:
+      ansible.builtin.debug:
         var: patronictl_result.stdout_lines
   ignore_errors: true
   tags: patroni_status, cluster_info, cluster_status, point_in_time_recovery
 
 - block:
-    - name: Get postgresql database list
+    - name: Info | Get postgresql database list
       run_once: true
       become: true
       become_user: postgres
-      command:
+      ansible.builtin.command:
         "{{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -U {{ patroni_superuser_username }} -d postgres -c
         \"
           SELECT
@@ -46,20 +46,20 @@
           ORDER BY 1
         \""
       register: dbs_result
-      delegate_to: "{{ groups.master[0] }}"
+      when: is_master is defined and is_master|bool
       changed_when: false
 
-    - name: PostgreSQL list of databases
+    - name: Info | PostgreSQL list of databases
       run_once: true
-      debug:
+      ansible.builtin.debug:
         var: dbs_result.stdout_lines
   ignore_errors: true
   tags: databases, db_list, cluster_info, cluster_status, point_in_time_recovery
 
 - block:  # if cluster_vip is defined
-    - name: PostgreSQL Cluster connection info
+    - name: Info | PostgreSQL Cluster connection info
       run_once: true
-      debug:
+      ansible.builtin.debug:
         msg:
           - +------------------------------------------------+
           - address (VIP) {{ cluster_vip }}
@@ -72,9 +72,9 @@
         - with_haproxy_load_balancing | bool
         - synchronous_mode | bool
 
-    - name: PostgreSQL Cluster connection info
+    - name: Info | PostgreSQL Cluster connection info
       run_once: true
-      debug:
+      ansible.builtin.debug:
         msg:
           - +------------------------------------------------+
           - address (VIP) {{ cluster_vip }}
@@ -85,9 +85,9 @@
         - with_haproxy_load_balancing | bool
         - not synchronous_mode | bool
 
-    - name: PostgreSQL Cluster connection info
+    - name: Info | PostgreSQL Cluster connection info
       run_once: true
-      debug:
+      ansible.builtin.debug:
         msg:
           - +------------------------------------------------+
           - address (VIP) {{ cluster_vip }}
@@ -102,14 +102,14 @@
   tags: conn_info, cluster_info, cluster_status
 
 - block:
-    - name: Get vip info
-      set_fact:
+    - name: Info | Get vip info
+      ansible.builtin.set_fact:
         man_ip: "{{ item }}"
       loop: "{{ ansible_all_ipv4_addresses }}"
       when: item == cluster_vip
 
-    - name: Virtual IP Address (VIP) info
-      debug:
+    - name: Info | Virtual IP Address (VIP) info
+      ansible.builtin.debug:
         msg:
           "Cluster ip address (VIP) {{ cluster_vip }}
            is running on server {{ ansible_hostname }}"
@@ -120,15 +120,15 @@
 
 
 - block:  # if cluster_vip is not defined
-    - name: Create list of nodes
+    - name: Info | Create list of nodes
       run_once: true
-      set_fact:
+      ansible.builtin.set_fact:
         haproxy_nodes: "{% for host in groups['balancers'] %}{{ hostvars[host]['inventory_hostname'] }}{% if not loop.last %},{% endif %}{% endfor %}"
         postgres_cluster_nodes: "{% for host in groups['postgres_cluster'] %}{{ hostvars[host]['inventory_hostname'] }}{% if not loop.last %},{% endif %}{% endfor %}"
 
-    - name: PostgreSQL Cluster connection info
+    - name: Info | PostgreSQL Cluster connection info
       run_once: true
-      debug:
+      ansible.builtin.debug:
         msg:
           - +------------------------------------------------+
           - address {{ haproxy_nodes }}
@@ -141,9 +141,9 @@
         - with_haproxy_load_balancing | bool
         - synchronous_mode | bool
 
-    - name: PostgreSQL Cluster connection info
+    - name: Info | PostgreSQL Cluster connection info
       run_once: true
-      debug:
+      ansible.builtin.debug:
         msg:
           - +------------------------------------------------+
           - address {{ haproxy_nodes }}
@@ -154,9 +154,9 @@
         - with_haproxy_load_balancing | bool
         - not synchronous_mode | bool
 
-    - name: PostgreSQL Cluster connection info
+    - name: Info | PostgreSQL Cluster connection info
       run_once: true
-      debug:
+      ansible.builtin.debug:
         msg:
           - +------------------------------------------------+
           - address {{ postgres_cluster_nodes }}

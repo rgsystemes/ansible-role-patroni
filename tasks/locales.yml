@@ -1,7 +1,7 @@
 ---
 
 - name: Generate locales
-  locale_gen:
+  ansible.builtin.locale_gen:
     name: "{{ item.language_country }}.{{ item.encoding }}"
     state: present
   loop: "{{ locale_gen | flatten(1) }}"
@@ -9,7 +9,7 @@
   tags: ['locales']
 
 - name: Set locale "{{ locale }}" into /etc/default/locale
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "/etc/default/locale"
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"

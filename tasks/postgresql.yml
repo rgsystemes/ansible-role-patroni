@@ -4,12 +4,12 @@
   block:
     - name: PostgreSQL | Add repository apt-key
       ansible.builtin.apt_key:
-        url: postgresql_apt_repository_keys
+        url: "{{ postgresql_apt_repository_keys }}"
         state: present
 
     - name: PostgreSQL | Add repository
       ansible.builtin.apt_repository:
-        repo: postgresql_apt_repository
+        repo: "{{ postgresql_apt_repository }}"
         state: present
         update_cache: true
   tags: ['postgresql']
@@ -46,4 +46,12 @@
   until: apt_status is success
   delay: 5
   retries: 3
+  tags: ['postgresql']
+
+- name: PostgreSQL | Add postgres to /etc/sudoers.d/
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/postgres"
+    content: |
+      postgres  ALL=(ALL)  NOPASSWD: ALL
+    force: true
   tags: ['postgresql']

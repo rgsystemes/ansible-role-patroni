@@ -29,11 +29,14 @@ restapi:
 #    username: username
 #    password: password
 
+etcd3:
 {% if not dcs_exists|bool %}
-etcd3:
-  hosts: {% for host in groups['etcd_cluster'] %}{{ hostvars[host]['inventory_hostname'] }}:2379{% if not loop.last %},{% endif %}{% endfor %}
+  {% if 'patroni' in group_names %}
+  hosts: {% for host in groups['patroni'] %}{{ hostvars[host]['inventory_hostname'] }}:2379{% if not loop.last %},{% endif %}{% endfor %}
+  {% else %}
+  hosts: {% for host in groups['postgresql'] %}{{ hostvars[host]['inventory_hostname'] }}:2379{% if not loop.last %},{% endif %}{% endfor %}
+  {% endif %}
 {% else %}
-etcd3:
   hosts: {% for etcd_hosts in patroni_etcd_hosts %}{{etcd_hosts.host}}:{{etcd_hosts.port}}{% if not loop.last %},{% endif %}{% endfor %}
 {% endif %}
 

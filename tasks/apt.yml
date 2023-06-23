@@ -13,12 +13,11 @@
 - name: Apt | Install packages
   ansible.builtin.apt:
     pkg:
-      # All
       - gnupg
       - apt-transport-https
       - iproute2
-      # PostgreSQL
       - python3-psycopg2
+      - iptables
     state: present
   register: apt_status
   until: apt_status is success

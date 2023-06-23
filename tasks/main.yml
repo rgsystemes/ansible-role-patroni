@@ -1,74 +1,83 @@
 ---
 
-- name: Hostname | Change hostname
-  include_tasks: hostname.yml
-  tags: ['hostname']
-
 - name: Apt | Install packages
   include_tasks: apt.yml
   tags: ['apt']
 
-- name: Etcd | Install etcd
-  include_tasks: etcd.yml
-  when: not dcs_exists|bool
-  tags: ['etcd']
-
-- name: PostgreSQL | Install PosgreSQL
-  include_tasks: postgresql.yml
-  tags: ['postgresql']
-
-- name: Swap | Manage swap
-  include_tasks: swap.yml
-  tags: ['swap']
-
-- name: Sysctl | Manage Sysctl for PostgreSQL
+- name: Sysctl | Manage Sysctl
   include_tasks: sysctl.yml
   tags: ['sysctl']
 
-- name: THP | Disable Transparent Huge Pages
-  include_tasks: thp.yml
-  tags: ['thp']
+- name: Etcd cluster | Install etcd
+  include_tasks: etcd.yml
+  when: not dcs_exists|bool and
+        (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["etcd"]|default([]))
+  tags: ['etcd']
 
-- name: PAM | Manage PAM limits
-  include_tasks: pam.yml
-  tags: ['pam']
+- name: PostgreSQL cluster | Install PostgreSQL cluster
+  block:
+    - name: PostgreSQL | Install PosgreSQL
+      include_tasks: postgresql.yml
+      tags: ['postgresql']
 
-- name: IO Scheduler | Manage IO Scheduler
-  include_tasks: ioscheduler.yml
-  tags: ['ioscheduler']
+    - name: Swap | Manage swap
+      include_tasks: swap.yml
+      tags: ['swap']
 
-- name: Locales | Manage locales
-  include_tasks: locales.yml
-  tags: ['locales']
+    - name: THP | Disable Transparent Huge Pages
+      include_tasks: thp.yml
+      tags: ['thp']
 
-- name: Auth | Manage authentications & SSH keys
-  include_tasks: auth.yml
-  tags: ['auth']
+    - name: PAM | Manage PAM limits
+      include_tasks: pam.yml
+      tags: ['pam']
 
-- name: HAProxy | Install HAProxy
-  include_tasks: haproxy.yml
-  tags: ['haproxy']
+    - name: IO Scheduler | Manage IO Scheduler
+      include_tasks: ioscheduler.yml
+      tags: ['ioscheduler']
 
-- name: Confd | Install Confd
-  include_tasks: confd.yml
-  tags: ['confd']
+    - name: Locales | Manage locales
+      include_tasks: locales.yml
+      tags: ['locales']
 
-- name: KeepAlived | Install KeepAlived
-  include_tasks: keepalived.yml
-  tags: ['keepalived']
+    - name: Auth | Manage authentications & SSH keys
+      include_tasks: auth.yml
+      tags: ['auth']
+  when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
+  tags: ['postgresql_cluster']
 
-- name: PGBouncer | Install PGBouncer
-  include_tasks: pgbouncer.yml
-  tags: ['pgbouncer']
+- name: Balancers cluster | Install PostgreSQL cluster
+  block:
+    - name: HAProxy | Install HAProxy
+      include_tasks: haproxy.yml
+      tags: ['haproxy']
 
-- name: Patroni | Install Patroni
-  include_tasks: patroni.yml
-  tags: ['patroni']
+    - name: Confd | Install Confd
+      include_tasks: confd.yml
+      tags: ['confd']
 
-- name: PGBouncer | Configure PGBouncer
-  include_tasks: config_pgbouncer.yml
-  tags: ['config_pgbouncer']
+    - name: KeepAlived | Install KeepAlived
+      include_tasks: keepalived.yml
+      tags: ['keepalived']
+  when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["balancers"]|default([]))
+  tags: ['balancers_cluster']
 
-- name: END | Deploy Finish
-  include_tasks: deploy_finish.yml
-  tags: ['finish']
+- name: PostgreSQL cluster | Install Patroni/PGBouncer cluster
+  block:
+    - name: PGBouncer | Install PGBouncer
+      include_tasks: pgbouncer.yml
+      tags: ['pgbouncer']
+
+    - name: Patroni | Install Patroni
+      include_tasks: patroni.yml
+      tags: ['patroni']
+
+    # - name: PGBouncer | Configure PGBouncer
+    #   include_tasks: config_pgbouncer.yml
+    #   tags: ['config_pgbouncer']
+  when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
+  tags: ['postgresql_cluster']
+
+# - name: Info | Get informations of cluster
+#   include_tasks: info.yml
+#   tags: ['info']

@@ -2,20 +2,11 @@
 
 - name: PGBouncer | Install PGBouncer package
   ansible.builtin.apt:
-    name: pgbouncer
+    name: "pgbouncer={{ pgbouncer_version }}"
   register: apt_status
   until: apt_status is success
   delay: 5
   retries: 3
-  tags: ['pgbouncer']
-
-- name: PGBouncer | Ensure config directory "{{ pgbouncer_conf_dir }}" exist
-  ansible.builtin.file:
-    path: "{{ pgbouncer_conf_dir }}"
-    state: directory
-    owner: postgres
-    group: postgres
-    mode: 0750
   tags: ['pgbouncer']
 
 - name: PGBouncer | Stop and disable standard init script
@@ -27,27 +18,17 @@
 
 - name: PGBouncer | Copy systemd service file
   ansible.builtin.template:
-    src: templates/pgbouncer.service.j2
+    src: pgbouncer.service.j2
     dest: /etc/systemd/system/pgbouncer.service
     owner: postgres
     group: postgres
     mode: 0644
-  notify: "restart pgbouncer"
+  notify: restart pgbouncer
   tags: ['pgbouncer']
 
 - name: PGBouncer | Enable log rotation with logrotate
   ansible.builtin.copy:
-    content: |
-      /var/log/pgbouncer/pgbouncer.log {
-             daily
-             rotate 7
-             copytruncate
-             delaycompress
-             compress
-             notifempty
-             missingok
-             su root root
-      }
+    src: pgbouncer
     dest: /etc/logrotate.d/pgbouncer
   tags: ['pgbouncer']
 
@@ -87,7 +68,7 @@
     owner: postgres
     group: postgres
     mode: 0640
-  notify: "restart pgbouncer"
+  notify: restart pgbouncer
   when: existing_pgcluster is not defined or not existing_pgcluster|bool
   tags: ['pgbouncer']
 
@@ -101,7 +82,7 @@
   when: existing_pgcluster is not defined or not existing_pgcluster|bool
   tags: ['pgbouncer']
 
-- name: PGBouncer | Add only an PG node
+- name: PGBouncer | Add only an PG node | add_balancers.yml
   block:
     - name: PGBouncer | Fetch pgbouncer.ini and userlist.txt conf files from master
       run_once: true
@@ -113,7 +94,7 @@
       loop:
         - /etc/pgbouncer/pgbouncer.ini
         - /etc/pgbouncer/userlist.txt
-      delegate_to: "{{ groups.master[0] }}"
+      when: is_master is defined and is_master|bool
 
     - name: PGBouncer | Copy pgbouncer.ini and userlist.txt conf files to replica
       ansible.builtin.copy:
@@ -146,7 +127,7 @@
         - { regexp: '^listen_addr =', line: 'listen_addr = {{ hostvars[inventory_hostname].inventory_hostname }}' }
       loop_control:
         label: "{{ item.line }}"
-      notify: "restart pgbouncer"
+      notify: restart pgbouncer
       when: with_haproxy_load_balancing|bool or
             (cluster_vip is not defined or cluster_vip | length < 1)
 
@@ -160,7 +141,9 @@
         - { regexp: '^listen_addr =', line: 'listen_addr = {{ hostvars[inventory_hostname].inventory_hostname }},{{ cluster_vip }}' }
       loop_control:
         label: "{{ item.line }}"
-      notify: "restart pgbouncer"
+      notify: restart pgbouncer
       when: not with_haproxy_load_balancing|bool and (cluster_vip is defined and cluster_vip | length > 0 )
   when: existing_pgcluster is defined and existing_pgcluster|bool
   tags: ['pgbouncer']
+
+- meta: flush_handlers

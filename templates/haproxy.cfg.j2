@@ -37,14 +37,26 @@ listen master
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 4 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
 
 listen replicas
@@ -60,14 +72,26 @@ listen replicas
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
 
 listen replicas_sync
@@ -83,14 +107,26 @@ listen replicas_sync
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
 
 listen replicas_async
@@ -106,13 +142,24 @@ listen replicas_async
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% for host in groups['postgres_cluster'] %}
+  {% if 'patroni' in group_names %}
+    {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-  {% endfor %}
+    {% endfor %}
+  {% else %}
+    {% for host in groups['postgresql'] %}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+    {% endfor %}
+  {% endif %}
 {% endif %}
-

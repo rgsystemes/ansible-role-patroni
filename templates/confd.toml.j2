@@ -2,9 +2,15 @@ backend = "etcdv3"
 interval = 10
 watch = true
 nodes = [
-{% for host in groups['etcd_cluster'] %}
+{% if 'patroni' in group_names %}
+  {% for host in groups['patroni'] %}
   "http://{{ hostvars[host]['inventory_hostname'] }}:2379",
-{% endfor %}
+  {% endfor %}
+{% else %}
+  {% for host in groups['etcd'] %}
+  "http://{{ hostvars[host]['inventory_hostname'] }}:2379",
+  {% endfor %}
+{% endif %}
  {% for etcd_hosts in patroni_etcd_hosts %}
   "http://{{etcd_hosts.host}}:{{etcd_hosts.port}}",
 {% endfor %}

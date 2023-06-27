@@ -1,77 +1,39 @@
 ---
 
 - name: HAProxy | Install HAProxy
-  block:
-    - name: HAProxy | Add haproxy.debian.net repository apt-key
-      ansible.builtin.apt_key:
-        url: https://haproxy.debian.net/bernat.debian.org.gpg
-        state: present
-
-    - name: HAProxy | Add haproxy.debian.net repository
-      ansible.builtin.apt_repository:
-        repo: "deb https://haproxy.debian.net {{ ansible_distribution_release }}-backports-1.8 main"
-        state: present
-        update_cache: true
-
-    - name: HAProxy | Install HAProxy package
-      ansible.builtin.apt:
-        name: "haproxy={{ haproxy_version }}"
-        state: present
-      register: apt_status
-      until: apt_status is success
-      delay: 5
-      retries: 3
-  tags: ['haproxy']
-
-- name: HAProxy | Add haproxy group
-  ansible.builtin.group:
-    name: haproxy
+  ansible.builtin.apt:
+    name: "haproxy={{ haproxy_version }}"
     state: present
-  tags: ['haproxy']
-
-- name: HAProxy | Add haproxy user
-  ansible.builtin.user:
-    name: haproxy
-    comment: "HAProxy user"
-    group: haproxy
-    shell: /usr/sbin/nologin
-  tags: ['haproxy']
-
-- name: HAProxy | Create directories
-  ansible.builtin.file:
-    dest: "{{ item }}"
-    state: directory
-    owner: haproxy
-    group: haproxy
-    mode: 0755
-  loop:
-    - /etc/haproxy
-    - /run/haproxy
-    - /var/lib/haproxy/dev
+    update_cache: yes
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
   tags: ['haproxy']
 
 - name: HAProxy | Generate conf file "/etc/haproxy/haproxy.cfg"
   ansible.builtin.template:
-    src: templates/haproxy.cfg.j2
+    src: haproxy.cfg.j2
     dest: /etc/haproxy/haproxy.cfg
     owner: haproxy
     group: haproxy
     mode: 0644
-  notify: "restart haproxy"
+  notify: restart haproxy
   when: (add_balancer is not defined or not add_balancer|bool) and
         (postgresql_cluster_maintenance is not defined or not postgresql_cluster_maintenance|bool)
   tags: ['haproxy']
 
-- name: HAProxy | Generate systemd service file "/etc/systemd/system/haproxy.service"
-  ansible.builtin.template:
-    src: templates/haproxy.service.j2
+- name: HAProxy | Generate systemd file
+  ansible.builtin.copy:
+    src: haproxy.service
     dest: /etc/systemd/system/haproxy.service
-    owner: haproxy
-    group: haproxy
-  notify: "restart haproxy"
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart haproxy
   tags: ['haproxy']
-
-- name: HAProxy | Add only an HAProxy node
+  
+- name: HAProxy | Add only one HAProxy node | add_balancers.yml
   block:
     - name: "HAProxy | Fetch haproxy.cfg file from {{ groups.balancers[0] }}"
       run_once: true
@@ -80,8 +42,11 @@
         dest: files/haproxy.cfg
         validate_checksum: true
         flat: true
-      notify: "restart haproxy"
-      delegate_to: "{{ groups.balancers[0] }}"
+      notify: restart haproxy
+      delegate_to: "{{ item }}"
+      with_items:
+        - "{{ groups.balancers[0]|default([]) }}"
+        - "{{ groups.patroni[0]|default([]) }}"
 
     - name: HAProxy | Copy haproxy.cfg file to replica
       ansible.builtin.copy:
@@ -89,7 +54,7 @@
         dest: /etc/haproxy/haproxy.cfg
         owner: haproxy
         group: haproxy
-      notify: "restart haproxy"
+      notify: restart haproxy
 
     - name: HAProxy | Remove haproxy.cfg file from localhost
       run_once: true
@@ -112,7 +77,7 @@
         - { regexp: '^.*bind.*:{{ haproxy_listen_port.replicas_async }}$', line: '    bind {{ hostvars[inventory_hostname].inventory_hostname }}:{{ haproxy_listen_port.replicas_async }}' }
       loop_control:
         label: "{{ item.line }}"
-      notify: "restart haproxy"
+      notify: restart haproxy
       when: cluster_vip is not defined or cluster_vip | length < 1
 
     - name: HAProxy | Prepare haproxy.cfg conf file (replace "bind" for stats)
@@ -129,23 +94,25 @@
         - { regexp: '^.*bind.*:{{ haproxy_listen_port.replicas_async }}$', line: '    bind {{ cluster_vip }}:{{ haproxy_listen_port.replicas_async }}' }
       loop_control:
         label: "{{ item.line }}"
-      notify: "restart haproxy"
+      notify: restart haproxy
       when: cluster_vip is defined and cluster_vip | length > 0
   when: add_balancer is defined and add_balancer|bool
   tags: ['haproxy']
 
-  - name : SELinux | Manage SELinux for HAProxy
-    block:
-      - name: SELinux | set haproxy_connect_any flag to enable tcp connections
-        ansible.builtin.seboolean:
-          name: haproxy_connect_any
-          state: true
-          persistent: true
-  
-      - name: SELinux | change the haproxy_t domain to permissive
-        ansible.builtin.selinux_permissive:
-          name: haproxy_t
-          permissive: true
+- meta: flush_handlers
+
+- name : SELinux | Manage SELinux for HAProxy
+  block:
+    - name: SELinux | set haproxy_connect_any flag to enable tcp connections
+      ansible.builtin.seboolean:
+        name: haproxy_connect_any
+        state: true
+        persistent: true
+
+    - name: SELinux | change the haproxy_t domain to permissive
+      ansible.builtin.selinux_permissive:
+        name: haproxy_t
+        permissive: true
   when: ansible_selinux.status is defined and ansible_selinux.status == 'enabled'
   ignore_errors: true
   tags: ['haproxy']

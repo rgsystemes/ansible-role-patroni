@@ -60,7 +60,7 @@
   listen: "restart keepalived"
 
 - name: Restart pgbouncer service
-  systemd:
+  ansible.builtin.systemd:
     daemon_reload: true
     name: pgbouncer
     enabled: true
@@ -76,3 +76,10 @@
     delay: 5
   ignore_errors: false
   listen: "restart pgbouncer"
+
+- name: Reload pgbouncer service
+  systemd:
+    name: pgbouncer
+    state: reloaded
+  listen: "reload pgbouncer"
+  ignore_errors: true

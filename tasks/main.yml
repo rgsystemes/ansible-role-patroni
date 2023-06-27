@@ -1,5 +1,9 @@
 ---
 
+- name: Hostname | Upgrade hostname
+  include_tasks: hostname.yml
+  tags: ['hostname']
+
 - name: Apt | Install packages
   include_tasks: apt.yml
   tags: ['apt']
@@ -72,12 +76,12 @@
       include_tasks: patroni.yml
       tags: ['patroni']
 
-    # - name: PGBouncer | Configure PGBouncer
-    #   include_tasks: config_pgbouncer.yml
-    #   tags: ['config_pgbouncer']
+    - name: PGBouncer | Configure PGBouncer
+      include_tasks: config_pgbouncer.yml
+      tags: ['config_pgbouncer']
   when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
   tags: ['postgresql_cluster']
 
-# - name: Info | Get informations of cluster
-#   include_tasks: info.yml
-#   tags: ['info']
+- name: Info | Get informations of cluster
+  include_tasks: info.yml
+  tags: ['info']

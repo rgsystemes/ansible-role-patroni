@@ -203,7 +203,7 @@ pgbouncer_install: true
 pgbouncer_generate_userlist: true 
 pgbouncer_conf_dir: "/etc/pgbouncer"
 pgbouncer_log_dir: "/var/log/pgbouncer"
-pgbouncer_listen_addr: "{{ ansible_eth1.ipv4.address }}"
+pgbouncer_listen_addr: "{{ ansible_default_ipv4.address }}"
 pgbouncer_listen_port: 6432
 pgbouncer_default_pool_size: 20
 pgbouncer_pools:

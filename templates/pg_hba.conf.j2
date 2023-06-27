@@ -88,12 +88,12 @@
   {{ client.type.ljust(10) |default('host') }}{{ client.database.ljust(25) |default('all') }}{{ client.user.ljust(25) |default('all') }}{{ client.address.ljust(25) |default('') }}{{ client.method |default('md5') }} {{ client.options |default(None) }}
 {% endfor %}
 {% if 'patroni' in group_names %}
-  {% for patroni in groups['patroni'] %}
-  host      all                      all                      {{ hostvars[patroni]['inventory_hostname'] }}/32         {{ postgresql_password_encryption_algorithm }}
+  {% for host in groups['patroni'] %}
+  host      all                      all                      {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% else %}
-  {% for patroni in groups['postgres_cluster'] %}
-  host      all                      all                      {{ hostvars[patroni]['inventory_hostname'] }}/32         {{ postgresql_password_encryption_algorithm }}
+  {% for host in groups['postgres_cluster'] %}
+  host      all                      all                      {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% endif %}
 # Allow replication connections from localhost, by a user with the
@@ -101,10 +101,10 @@
   host      replication              {{ patroni_replication_username }}               localhost                trust
 {% if 'patroni' in group_names %}
   {% for host in groups['patroni'] %}
-  host      replication              {{ patroni_replication_username }}               {{ hostvars[host]['inventory_hostname'] }}/32         {{ postgresql_password_encryption_algorithm }}
+  host      replication              {{ patroni_replication_username }}               {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% else %}
   {% for host in groups['postgres_cluster'] %}
-  host      replication              {{ patroni_replication_username }}               {{ hostvars[host]['inventory_hostname'] }}/32         {{ postgresql_password_encryption_algorithm }}
+  host      replication              {{ patroni_replication_username }}               {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% endif %}

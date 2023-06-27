@@ -1,6 +1,7 @@
 ---
 
-- block:
+- name: Info | Display cluster PostgreSQL health
+  block:
     - name: Info | Check postgresql cluster health
       run_once: true
       become: true
@@ -16,9 +17,10 @@
       ansible.builtin.debug:
         var: patronictl_result.stdout_lines
   ignore_errors: true
-  tags: patroni_status, cluster_info, cluster_status, point_in_time_recovery
+  tags: ['info']
 
-- block:
+- name: Info | Display cluster PostgreSQL databases
+  block:
     - name: Info | Get postgresql database list
       run_once: true
       become: true
@@ -54,9 +56,10 @@
       ansible.builtin.debug:
         var: dbs_result.stdout_lines
   ignore_errors: true
-  tags: databases, db_list, cluster_info, cluster_status, point_in_time_recovery
+  tags: ['info']
 
-- block:  # if cluster_vip is defined
+- name: Info | Display cluster PostgreSQL connections informations
+  block:
     - name: Info | PostgreSQL Cluster connection info
       run_once: true
       ansible.builtin.debug:
@@ -95,13 +98,12 @@
           - +------------------------------------------------+
       when:
         - not with_haproxy_load_balancing | bool
-  when:
-    - (cluster_vip is defined and cluster_vip | length > 0)
-    - dcs_type == "etcd"
+  when: cluster_vip is defined and cluster_vip | length > 0
   ignore_errors: true
-  tags: conn_info, cluster_info, cluster_status
+  tags: ['info']
 
-- block:
+- name: Info | Display cluster VIP informations
+  block:
     - name: Info | Get vip info
       ansible.builtin.set_fact:
         man_ip: "{{ item }}"
@@ -116,10 +118,11 @@
       when: man_ip is defined and man_ip == cluster_vip
   when: (cluster_vip is defined and cluster_vip | length > 0)
   ignore_errors: true
-  tags: vip_owner, vip_status, cluster_info, cluster_status
+  tags: ['info']
 
 
-- block:  # if cluster_vip is not defined
+- name: Info | Display nodes informations
+  block: 
     - name: Info | Create list of nodes
       run_once: true
       ansible.builtin.set_fact:
@@ -165,9 +168,5 @@
       when:
         - not with_haproxy_load_balancing | bool
   ignore_errors: true
-  when:
-    - (cluster_vip is not defined or cluster_vip | length < 1)
-    - dcs_type == "etcd"
-  tags: conn_info, cluster_info, cluster_status
-
-...
+  when: cluster_vip is not defined or cluster_vip | length < 1
+  tags: ['info']

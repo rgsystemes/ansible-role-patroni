@@ -174,7 +174,7 @@ ssh_known_hosts: "{{ groups['postgres_cluster'] }}"
 
 # HAProxy variables
 haproxy_version: "2.2.9-2+deb11u5"
-cluster_vip: "192.168.10.123"
+cluster_vip: "0.0.0.0" # To change
 vip_interface: "{{ ansible_default_ipv4.interface }}" 
 with_haproxy_load_balancing: true  # or 'true' if you want to install and configure the load-balancing
 haproxy_listen_port:

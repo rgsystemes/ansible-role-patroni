@@ -1,4 +1,7 @@
 ---
+# Hardware variables
+openstack: true
+
 # Sysctl variables
 sysctl_set: true
 sysctl_conf:
@@ -22,9 +25,8 @@ sysctl_conf:
 
 # Etcd variables
 dcs_exists: false  # Or 'true' if you don't want to deploy a new etcd cluster
-etcd_version: "etcd=3.3.25+dfsg-6"
+etcd_version: "3.3.25+dfsg-6"
 etcd_cluster_name: "etcd-{{ patroni_cluster_name }}"
-etcd_package_repo: "https://github.com/etcd-io/etcd/releases/download/v{{ etcd_version }}/etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
 etcd_data_dir: "/var/lib/etcd"
 etcd_conf_dir: "/etc/etcd"
 
@@ -157,7 +159,7 @@ soft_nofile: 65536
 hard_nofile: 200000
 
 # I/O Scheduler variables
-set_scheduler: false
+set_scheduler: true
 scheduler:
   - { sched: "deadline", nr_requests: "1024", device: "sda" }
 
@@ -167,10 +169,9 @@ locale_gen:
 locale: "en_US.UTF-8"
 
 # Authentication variables
-enable_ssh_key_based_authentication: false
+enable_ssh_key_based_authentication: true
 ssh_key_user: "postgres"
-ssh_key_state: "present"
-ssh_known_hosts: "{{ groups['postgres_cluster'] }}"
+ssh_known_hosts: "{% if 'patroni' in group_names %}{{ groups['patroni'] }}{% else %}{{ groups['postgresql'] }}{% endif %}"
 
 # HAProxy variables
 haproxy_version: "2.2.9-2+deb11u5"
@@ -196,11 +197,15 @@ confd_package_repo: "https://github.com/kelseyhightower/confd/releases/download/
 
 # Keepalived variables
 keepalived_version: "1:2.1.5-0.2+deb11u1"
+keepalived_scripts_dir: "/usr/libexec/keepalived"
+keepalived_conf_dir: "/etc/keepalived"
+keepalived_bin_dir: "/usr/bin"
 
 # PGBouncer variables
 pgbouncer_version: "1.15.0-1"
 pgbouncer_install: true
-pgbouncer_generate_userlist: true 
+pgbouncer_generate_userlist: true
+pgbouncer_bin_dir: "/usr/bin"
 pgbouncer_conf_dir: "/etc/pgbouncer"
 pgbouncer_log_dir: "/var/log/pgbouncer"
 pgbouncer_listen_addr: "{{ ansible_default_ipv4.address }}"

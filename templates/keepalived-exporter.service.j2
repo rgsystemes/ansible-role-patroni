@@ -1,0 +1,24 @@
+[Unit]
+Description=Prometheus KeepAlived Exporter
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ keepalived_bin_dir }}/keepalived-exporter
+
+SyslogIdentifier=keepalived_exporter
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+ProtectHome=yes
+NoNewPrivileges=yes
+
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=yes
+
+[Install]
+WantedBy=multi-user.target
+ 

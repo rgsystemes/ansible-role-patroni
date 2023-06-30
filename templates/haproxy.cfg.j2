@@ -21,7 +21,9 @@ defaults
 
 listen stats
     mode http
-    bind {{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ haproxy_listen_port.stats }}
+    bind {{ ansible_default_ipv4.address }}:{{ haproxy_listen_port.stats }}
+    option http-use-htx
+    http-request use-service prometheus-exporter if { path /metrics }
     stats enable
     stats uri /
 
@@ -29,7 +31,7 @@ listen master
 {% if cluster_vip is defined and cluster_vip | length > 0 %}
     bind {{ cluster_vip }}:{{ haproxy_listen_port.master }}
 {% else %}
-    bind {{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ haproxy_listen_port.master }}
+    bind {{ ansible_default_ipv4.address }}:{{ haproxy_listen_port.master }}
 {% endif %}
     maxconn {{ haproxy_maxconn.master }}
     option tcplog
@@ -63,7 +65,7 @@ listen replicas
 {% if cluster_vip is defined and cluster_vip | length > 0 %}
     bind {{ cluster_vip }}:{{ haproxy_listen_port.replicas }}
 {% else %}
-    bind {{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ haproxy_listen_port.replicas }}
+    bind {{ ansible_default_ipv4.address }}:{{ haproxy_listen_port.replicas }}
 {% endif %}
     maxconn {{ haproxy_maxconn.replica }}
     option tcplog
@@ -74,22 +76,22 @@ listen replicas
 {% if pgbouncer_install|bool %}
   {% if 'patroni' in group_names %}
     {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% else %}
     {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
   {% if 'patroni' in group_names %}
     {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% else %}
     {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% endif %}
 {% endif %}
@@ -98,7 +100,7 @@ listen replicas_sync
 {% if cluster_vip is defined and cluster_vip | length > 0 %}
     bind {{ cluster_vip }}:{{ haproxy_listen_port.replicas_sync }}
 {% else %}
-    bind {{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ haproxy_listen_port.replicas_sync }}
+    bind {{ ansible_default_ipv4.address }}:{{ haproxy_listen_port.replicas_sync }}
 {% endif %}
     maxconn {{ haproxy_maxconn.replica }}
     option tcplog
@@ -109,22 +111,22 @@ listen replicas_sync
 {% if pgbouncer_install|bool %}
   {% if 'patroni' in group_names %}
     {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% else %}
     {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
   {% if 'patroni' in group_names %}
     {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% else %}
     {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% endif %}
 {% endif %}
@@ -133,7 +135,7 @@ listen replicas_async
 {% if cluster_vip is defined and cluster_vip | length > 0 %}
     bind {{ cluster_vip }}:{{ haproxy_listen_port.replicas_async }}
 {% else %}
-    bind {{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ haproxy_listen_port.replicas_async }}
+    bind {{ ansible_default_ipv4.address }}:{{ haproxy_listen_port.replicas_async }}
 {% endif %}
     maxconn {{ haproxy_maxconn.replica }}
     option tcplog
@@ -144,22 +146,22 @@ listen replicas_async
 {% if pgbouncer_install|bool %}
   {% if 'patroni' in group_names %}
     {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% else %}
     {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
   {% if 'patroni' in group_names %}
     {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% else %}
     {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+server {{ hostvars[host]['ansible_hostname'] }} {{ hostvars[host].ansible_default_ipv4.address }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
     {% endfor %}
   {% endif %}
 {% endif %}

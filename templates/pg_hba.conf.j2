@@ -83,6 +83,9 @@
 #
 # Database administrative login by Unix domain socket
 
+# Local root Unix user, passwordless access
+local  all  postgres    peer map=root_as_postgres
+
 # TYPE      DATABASE                 USER                     ADDRESS                  METHOD
 {% for client in postgresql_pg_hba %}
   {{ client.type.ljust(10) |default('host') }}{{ client.database.ljust(25) |default('all') }}{{ client.user.ljust(25) |default('all') }}{{ client.address.ljust(25) |default('') }}{{ client.method |default('md5') }} {{ client.options |default(None) }}
@@ -92,7 +95,7 @@
   host      all                      all                      {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% else %}
-  {% for host in groups['postgres_cluster'] %}
+  {% for host in groups['postgresql'] %}
   host      all                      all                      {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% endif %}
@@ -104,7 +107,7 @@
   host      replication              {{ patroni_replication_username }}               {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% else %}
-  {% for host in groups['postgres_cluster'] %}
+  {% for host in groups['postgresql'] %}
   host      replication              {{ patroni_replication_username }}               {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% endif %}

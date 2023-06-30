@@ -1,7 +1,7 @@
 ---
 
 - name: "Make sure {{ postgresql_data_dir }}/pg_wal is symlink"
-  stat:
+  ansible.builtin.stat:
     path: "{{ postgresql_data_dir }}/pg_wal"
   register: sym
 
@@ -37,7 +37,7 @@
     - name: "Synchronize {{ postgresql_data_dir }}/pg_wal to {{ postgresql_wal_dir }}"
       become: true
       become_user: postgres
-      synchronize:
+      ansible.builtin.synchronize:
         src: "{{ postgresql_data_dir }}/pg_wal/"
         dest: "{{ postgresql_wal_dir }}/"
       delegate_to: "{{ inventory_hostname }}"

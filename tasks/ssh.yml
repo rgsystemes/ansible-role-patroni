@@ -1,41 +1,41 @@
 ---
 
-- block:
-    - name: Auth | Check user "{{ ssh_key_user }}" exists
+- name: SSH | Generate SSH authentication between PostgreSQL servers
+  block:
+    - name: SSH | Check user "{{ ssh_key_user }}" exists
       ansible.builtin.user:
         name: "{{ ssh_key_user }}"
         shell: /bin/bash
         state: present
 
-    - name: Auth | Create a 2048-bit SSH key for user "{{ ssh_key_user }}" in ~/.ssh/id_rsa (if not already exist)
+    - name: SSH | Create a 2048-bit SSH key for user "{{ ssh_key_user }}" in ~/.ssh/id_rsa (if not already exist)
       ansible.builtin.user:
         name: "{{ ssh_key_user }}"
         generate_ssh_key: true
         ssh_key_bits: 2048
         ssh_key_file: .ssh/id_rsa
 
-    - name: Auth | Fetch key files from remote servers to ansible server
+    - name: SSH | Fetch key files from remote servers to ansible server
       ansible.builtin.fetch:
         src: "~{{ ssh_key_user }}/.ssh/id_rsa.pub"
         dest: "files/{{ ansible_hostname }}-id_rsa.pub"
         flat: true
       changed_when: false
 
-    - name: Auth | Copy key files and add to authorized_keys
+    - name: SSH | Copy key files and add to authorized_keys
       ansible.builtin.authorized_key:
         user: "{{ ssh_key_user }}"
-        state: "{{ ssh_key_state }}"
+        state: present
         key: "{{ lookup('pipe','cat files/*id_rsa.pub') }}"
         exclusive: false
 
-    # known_hosts
-    - name: Auth | known_hosts | for each host, scan for its ssh public key
+    - name: SSH | known_hosts | For each host, scan for its ssh public key
       ansible.builtin.command: "ssh-keyscan -trsa -p {{ ansible_ssh_port | default(22) }} {{ item }}"
       loop: "{{ ssh_known_hosts }}"
       register: ssh_known_host_results
       changed_when: false
 
-    - name: Auth | known_hosts | for each host, add/update the public key in the "~{{ ssh_key_user }}/.ssh/known_hosts"
+    - name: SSH | known_hosts | For each host, add/update the public key in the "~{{ ssh_key_user }}/.ssh/known_hosts"
       become: true
       become_user: "{{ ssh_key_user }}"
       ansible.builtin.known_hosts:
@@ -47,4 +47,4 @@
   ignore_errors: true
   when: enable_ssh_key_based_authentication is defined and
         enable_ssh_key_based_authentication|bool
-  tags: ['auth']
+  tags: ['ssh']

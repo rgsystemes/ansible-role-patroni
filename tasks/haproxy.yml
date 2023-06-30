@@ -35,7 +35,7 @@
   
 - name: HAProxy | Add only one HAProxy node | add_balancers.yml
   block:
-    - name: "HAProxy | Fetch haproxy.cfg file from {{ groups.balancers[0] }}"
+    - name: HAProxy | Fetch haproxy.cfg file from balancers
       run_once: true
       ansible.builtin.fetch:
         src: /etc/haproxy/haproxy.cfg

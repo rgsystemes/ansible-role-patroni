@@ -40,7 +40,7 @@
 
 - name: Configure PGBouncer | Update pgbouncer.ini
   ansible.builtin.template:
-    src: ../templates/pgbouncer.ini.j2
+    src: pgbouncer.ini.j2
     dest: "{{ pgbouncer_conf_dir }}/pgbouncer.ini"
     owner: postgres
     group: postgres

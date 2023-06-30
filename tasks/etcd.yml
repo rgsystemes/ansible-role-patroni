@@ -2,7 +2,7 @@
 
 - name: Etcd | Install etcd packages
   ansible.builtin.apt:
-    name: "{{ etcd_version }}"
+    name: "etcd={{ etcd_version }}"
     state: present
   register: etcd_status
   until: etcd_status is success

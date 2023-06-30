@@ -44,11 +44,11 @@
       include_tasks: locales.yml
       tags: ['locales']
 
-    - name: Auth | Manage authentications & SSH keys
-      include_tasks: auth.yml
-      tags: ['auth']
+    - name: SSH | Manage SSH keys
+      include_tasks: ssh.yml
+      tags: ['ssh']
   when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
-  tags: ['postgresql_cluster']
+  tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
 
 - name: Balancers cluster | Install PostgreSQL cluster
   block:
@@ -64,7 +64,7 @@
       include_tasks: keepalived.yml
       tags: ['keepalived']
   when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["balancers"]|default([]))
-  tags: ['balancers_cluster']
+  tags: ['haproxy', 'confd', 'keepalived', 'exporter']
 
 - name: PostgreSQL cluster | Install Patroni/PGBouncer cluster
   block:
@@ -80,7 +80,7 @@
       include_tasks: config_pgbouncer.yml
       tags: ['config_pgbouncer']
   when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
-  tags: ['postgresql_cluster']
+  tags: ['pgbouncer', 'patroni', 'config_pgbouncer', 'exporter']
 
 - name: Info | Get informations of cluster
   include_tasks: info.yml

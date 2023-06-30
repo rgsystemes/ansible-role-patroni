@@ -40,7 +40,7 @@
     name: confd
     enabled: true
     state: restarted
-  listen: restart confd"
+  listen: restart confd
 
 - name: Restart keepalived service
   ansible.builtin.systemd:

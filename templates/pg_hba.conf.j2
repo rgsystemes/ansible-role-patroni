@@ -83,9 +83,6 @@
 #
 # Database administrative login by Unix domain socket
 
-# Local root Unix user, passwordless access
-local  all  postgres    peer map=root_as_postgres
-
 # TYPE      DATABASE                 USER                     ADDRESS                  METHOD
 {% for client in postgresql_pg_hba %}
   {{ client.type.ljust(10) |default('host') }}{{ client.database.ljust(25) |default('all') }}{{ client.user.ljust(25) |default('all') }}{{ client.address.ljust(25) |default('') }}{{ client.method |default('md5') }} {{ client.options |default(None) }}

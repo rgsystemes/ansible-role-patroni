@@ -1,7 +1,13 @@
 ---
 
+- name: Update facts | Update ansible_default_ipv4
+  include_tasks: facts.yml
+  when: lab is defined and lab|bool
+  tags: ['facts']
+
 - name: Hostname | Upgrade hostname
   include_tasks: hostname.yml
+  when: lab is not defined and lab|bool
   tags: ['hostname']
 
 - name: Apt | Install packages

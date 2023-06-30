@@ -1,6 +1,7 @@
 ---
 # Hardware variables
 openstack: true
+lab: false
 
 # Sysctl variables
 sysctl_set: true

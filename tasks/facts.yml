@@ -1,7 +1,0 @@
----
-
-- name: Update facts | Update ansible_default_ipv4
-  set_fact:
-    ansible_default_ipv4:
-      address: "{{ ansible_eth1.ipv4.address }}"
-      interface: "{{ ansible_eth1.device }}"

@@ -7,9 +7,13 @@ ETCD_INITIAL_CLUSTER_TOKEN="{{ etcd_cluster_name }}"
 {% if 'patroni' in group_names %}
 ETCD_INITIAL_CLUSTER="{% for host in groups['patroni'] %}{{ hostvars[host]['ansible_hostname'] }}=http://{{ hostvars[host].ansible_default_ipv4.address }}:2380{% if not loop.last %},{% endif %}{% endfor %}"
 {% else %}
+{% if 'patroni' in groups %}
+ETCD_INITIAL_CLUSTER="{% for host in groups['etcd'] + groups['patroni'] %}{{ hostvars[host]['ansible_hostname'] }}=http://{{ hostvars[host].ansible_default_ipv4.address }}:2380{% if not loop.last %},{% endif %}{% endfor %}"
+{% else %}
 ETCD_INITIAL_CLUSTER="{% for host in groups['etcd'] %}{{ hostvars[host]['ansible_hostname'] }}=http://{{ hostvars[host].ansible_default_ipv4.address }}:2380{% if not loop.last %},{% endif %}{% endfor %}"
 {% endif %}
-ETCD_INITIAL_CLUSTER_STATE="new"
+{% endif %}
+ETCD_INITIAL_CLUSTER_STATE="{{ etcd_cluster_state }}"
 ETCD_DATA_DIR="{{ etcd_data_dir }}"
 ETCD_ELECTION_TIMEOUT="5000"
 ETCD_HEARTBEAT_INTERVAL="1000"

@@ -3,15 +3,15 @@
 - name: Hostname | Upgrade hostname
   include_tasks: hostname.yml
   when: lab is not defined and lab|bool
-  tags: ['hostname']
+  tags: ['hostname', 'etcd']
 
 - name: Apt | Install packages
   include_tasks: apt.yml
-  tags: ['apt']
+  tags: ['apt', 'etcd']
 
 - name: Sysctl | Manage Sysctl
   include_tasks: sysctl.yml
-  tags: ['sysctl']
+  tags: ['sysctl', 'etcd']
 
 - name: Etcd cluster | Install etcd
   include_tasks: etcd.yml
@@ -78,7 +78,7 @@
       tags: ['patroni']
 
     - name: PGBouncer | Configure PGBouncer
-      include_tasks: config_pgbouncer.yml
+      include_tasks: pgbouncer.config.yml
       tags: ['config_pgbouncer']
   when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
   tags: ['pgbouncer', 'patroni', 'config_pgbouncer', 'exporter']

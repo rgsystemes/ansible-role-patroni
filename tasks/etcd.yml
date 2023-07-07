@@ -39,6 +39,26 @@
     state: stopped
   tags: ['etcd']
 
+- name: Etcd | Add a node to etcd cluster
+  block:
+    - name: Etcd | Remove data directory
+      ansible.builtin.file:
+        path: "{{ etcd_data_dir }}/member"
+        state: absent
+
+    - name: Etcd | Get Leader
+      ansible.builtin.shell: |
+        etcdctl member list | grep "isLeader=true" | awk '{print substr($2, 6)}'
+      register: etcd_leader
+      delegate_to: "{{ groups.patroni[0] }}"
+
+    - name: Etcd | Add a member to etcd cluster
+      ansible.builtin.shell: |
+        etcdctl member add {{ ansible_hostname }} http://{{ ansible_default_ipv4.address }}:2380
+      delegate_to: "{{ etcd_leader.stdout }}"
+  when: new_etcd_node is defined
+  tags: ['etcd', 'new_etcd']
+
 - name: Etcd | Enable and start etcd service
   ansible.builtin.systemd:
     daemon_reload: true
@@ -72,4 +92,13 @@
     - name: Etcd | Display cluster health
       ansible.builtin.debug:
         msg: "{{ etcd_health_result.stderr }}"
+    
+    - name: Etcd | Display member list
+      ansible.builtin.shell: |
+        etcdctl member list
+      delegate_to: "{{ groups.patroni[0] }}"
   tags: ['etcd']
+
+- meta: end_play
+  when: new_etcd_node is defined
+  tags: ['etcd','new_etcd']

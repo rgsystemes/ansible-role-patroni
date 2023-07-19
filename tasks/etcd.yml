@@ -57,7 +57,7 @@
         etcdctl member add {{ ansible_hostname }} http://{{ ansible_default_ipv4.address }}:2380
       delegate_to: "{{ etcd_leader.stdout }}"
   when: new_etcd_node is defined
-  tags: ['etcd', 'new_etcd']
+  tags: ['etcd']
 
 - name: Etcd | Enable and start etcd service
   ansible.builtin.systemd:
@@ -101,4 +101,4 @@
 
 - meta: end_play
   when: new_etcd_node is defined
-  tags: ['etcd','new_etcd']
+  tags: ['etcd']

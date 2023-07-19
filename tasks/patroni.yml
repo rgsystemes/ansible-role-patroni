@@ -186,7 +186,6 @@
         msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized"
       when: pgdata_initialized.stat.exists is defined and
             pgdata_initialized.stat.exists
-      tags: patroni, patroni_check_init
 
     - name: Prepare PostgreSQL | make sure the postgresql config files exists
       ansible.builtin.stat:

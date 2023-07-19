@@ -161,7 +161,7 @@ soft_nofile: 65536
 hard_nofile: 200000
 
 # I/O Scheduler variables
-set_scheduler: true
+set_scheduler: false
 scheduler:
   - { sched: "deadline", nr_requests: "1024", device: "sda" }
 

@@ -126,8 +126,8 @@
     - name: Info | Create list of nodes
       run_once: true
       ansible.builtin.set_fact:
-        haproxy_nodes: "{% for host in groups['balancers'] %}{{ hostvars[host]['inventory_hostname'] }}{% if not loop.last %},{% endif %}{% endfor %}"
-        postgres_cluster_nodes: "{% for host in groups['postgres_cluster'] %}{{ hostvars[host]['inventory_hostname'] }}{% if not loop.last %},{% endif %}{% endfor %}"
+        haproxy_nodes: "{% if 'patroni' in group_names %}{% for host in groups['patroni'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% else %}{% for host in groups['balancers'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}"
+        postgres_cluster_nodes: "{% if 'patroni' in group_names %}{% for host in groups['patroni'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% else %}{% for host in groups['postgresql'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}"
 
     - name: Info | PostgreSQL Cluster connection info
       run_once: true

@@ -16,6 +16,8 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
+    owner: root
+    group: root
     mode: 0755
   loop:
     - /etc/confd/conf.d
@@ -26,6 +28,9 @@
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
   notify: restart confd
   loop:
   - src: confd.toml.j2
@@ -39,7 +44,7 @@
 
 - name: Confd | Add only an Confd node | add_balancers.yml
   block:
-    - name: Confd | "Fetch confd.toml, haproxy.toml, haproxy.tmpl conf files from {{ groups.balancers[0] }}"
+    - name: Confd | Fetch confd.toml, haproxy.toml, haproxy.tmpl conf files from balancers
       run_once: true
       ansible.builtin.fetch:
         src: "{{ item }}"

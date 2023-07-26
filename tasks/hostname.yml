@@ -1,18 +1,21 @@
 ---
 
 - name: Upgrade /etc/hosts
-  block:
-    - name: Change hostname
-      hostname:
-        name: "{{ ansible_hostname }}"
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: 0644
+  tags: ['hostname']
 
-    - name: Change hostname in /etc/hosts
-      lineinfile:
-        dest: /etc/hosts
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
-        state: present
-      no_log: true
-      loop:
-        - { regexp: '^127\.0\.0\.1[ \t]+localhost', line: '127.0.0.1 localhost {{ ansible_hostname }}' }
+- name: Disable cloud init modules update_etc_hosts
+  ansible.builtin.lineinfile:
+    path: /etc/cloud/cloud.cfg
+    regexp: '^ - update_etc_hosts'
+    line: '# - update_etc_hosts'
+    owner: root
+    group: root
+    mode: 0644
+  when: openstack is defined and openstack|bool
   tags: ['hostname']

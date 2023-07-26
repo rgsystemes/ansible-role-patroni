@@ -92,7 +92,7 @@
   host      all                      all                      {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% else %}
-  {% for host in groups['postgres_cluster'] %}
+  {% for host in groups['postgresql'] %}
   host      all                      all                      {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% endif %}
@@ -104,7 +104,7 @@
   host      replication              {{ patroni_replication_username }}               {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% else %}
-  {% for host in groups['postgres_cluster'] %}
+  {% for host in groups['postgresql'] %}
   host      replication              {{ patroni_replication_username }}               {{ hostvars[host].ansible_default_ipv4.address }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 {% endif %}

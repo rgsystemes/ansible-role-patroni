@@ -4,11 +4,11 @@ watch = true
 nodes = [
 {% if 'patroni' in group_names %}
   {% for host in groups['patroni'] %}
-  "http://{{ hostvars[host]['inventory_hostname'] }}:2379",
+  "http://{{ hostvars[host].ansible_default_ipv4.address }}:2379",
   {% endfor %}
 {% else %}
   {% for host in groups['etcd'] %}
-  "http://{{ hostvars[host]['inventory_hostname'] }}:2379",
+  "http://{{ hostvars[host].ansible_default_ipv4.address }}:2379",
   {% endfor %}
 {% endif %}
  {% for etcd_hosts in patroni_etcd_hosts %}

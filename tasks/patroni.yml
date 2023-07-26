@@ -141,6 +141,8 @@
   ansible.builtin.file:
     path: "{{ postgresql_stats_temp_directory_path }}"
     state: directory
+    owner: postgres
+    group: postgres
     mode: 01777
   when:
     - postgresql_stats_temp_directory_path is defined
@@ -164,9 +166,9 @@
 - name: Prepare PostgreSQL | make sure the custom WAL directory "{{ postgresql_wal_dir }}" exists
   ansible.builtin.file:
     path: "{{ postgresql_wal_dir }}"
+    state: directory
     owner: postgres
     group: postgres
-    state: directory
     mode: 0700
   when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
   tags: ['patroni']
@@ -174,27 +176,26 @@
 - name: Prepare PostgreSQL | When PostgreSQL does not exist
   block:
     - name: Prepare PostgreSQL | check that data directory "{{ postgresql_data_dir }}" is not initialized
-      stat:
+      ansible.builtin.stat:
         path: "{{ postgresql_data_dir }}/PG_VERSION"
       register: pgdata_initialized
       when: patroni_cluster_bootstrap_method == "initdb"
 
     - name: Prepare PostgreSQL | data directory check result
-      fail:
+      ansible.builtin.fail:
         msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized"
       when: pgdata_initialized.stat.exists is defined and
             pgdata_initialized.stat.exists
-      tags: patroni, patroni_check_init
 
     - name: Prepare PostgreSQL | make sure the postgresql config files exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ postgresql_conf_dir }}/postgresql.conf"
       register: postgresql_conf_file
 
     - name: Prepare PostgreSQL | generate default postgresql config files
       become: true
       become_user: postgres
-      command: >
+      ansible.builtin.command: >
         /usr/bin/pg_createcluster {{ postgresql_version }} {{ postgresql_cluster_name }}
         -d {{ postgresql_data_dir }}
         -p {{ postgresql_port }}
@@ -205,7 +206,7 @@
       when: not postgresql_conf_file.stat.exists
 
     - name: Prepare PostgreSQL | make sure the data directory "{{ postgresql_data_dir }}" is empty
-      file:
+      ansible.builtin.file:
         path: "{{ postgresql_data_dir }}"
         state: "{{ item }}"
         owner: postgres
@@ -216,7 +217,7 @@
         - directory
 
     - name: Prepare PostgreSQL | make sure the custom WAL directory "{{ postgresql_wal_dir }}" is empty
-      file:
+      ansible.builtin.file:
         path: "{{ postgresql_wal_dir }}"
         state: "{{ item }}"
         owner: postgres
@@ -274,7 +275,7 @@
 
         - name: Prepare PostgreSQL | generate pg_hba.conf on Master
           ansible.builtin.template:
-            src: templates/pg_hba.conf.j2
+            src: pg_hba.conf.j2
             dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
             owner: postgres
             group: postgres
@@ -474,7 +475,7 @@
 - name: PostgreSQL | Disable postgresql from autostart
   block:
     - name: PostgreSQL | Turning off postgresql autostart from config "start.conf" (will be managed by patroni)
-      copy:
+      ansible.builtin.copy:
         dest: "{{ postgresql_conf_dir }}/start.conf"
         content: "manual"
         owner: postgres
@@ -482,7 +483,7 @@
         mode: 0644
 
     - name: PostgreSQL | Disable "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}" service
-      systemd:
+      ansible.builtin.systemd:
         name: "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}"
         enabled: false
         daemon_reload: true

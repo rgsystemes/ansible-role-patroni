@@ -2,7 +2,7 @@
 
 - name: Hostname | Upgrade hostname
   include_tasks: hostname.yml
-  when: lab is not defined and lab|bool
+  when: not lab
   tags: ['hostname', 'etcd']
 
 - name: Apt | Install packages
@@ -72,16 +72,25 @@
     - name: PGBouncer | Install PGBouncer
       include_tasks: pgbouncer.yml
       tags: ['pgbouncer']
+    
+    - name: PostgreSQL | Preconfigure PostgreSQL
+      include_tasks: postgresql.preconfig.yml
+      tags: ['postgresql']
 
     - name: Patroni | Install Patroni
       include_tasks: patroni.yml
       tags: ['patroni']
 
+    - name: Patroni | Start Patroni
+      include_tasks: patroni.start.yml
+      tags: ['patroni']
+    
     - name: PGBouncer | Configure PGBouncer
       include_tasks: pgbouncer.config.yml
-      tags: ['config_pgbouncer']
+      tags: ['pgbouncer', 'exporter']
+
   when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
-  tags: ['pgbouncer', 'patroni', 'config_pgbouncer', 'exporter']
+  tags: ['pgbouncer', 'postgresql', 'patroni', 'exporter']
 
 - name: Info | Get informations of cluster
   include_tasks: info.yml

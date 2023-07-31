@@ -23,7 +23,6 @@
     owner: postgres
     group: postgres
     mode: 0644
-  notify: restart pgbouncer
   tags: ['pgbouncer']
 
 - name: PGBouncer | Enable log rotation with logrotate
@@ -61,15 +60,13 @@
   when: pgbouncer_pools is defined and pgbouncer_pools | length > 0 and total_pool_size | int > max_connections | int
   tags: ['pgbouncer']
 
-- name: PGBouncer | Configure pgbouncer.ini
-  ansible.builtin.template:
-    src: pgbouncer.ini.j2
-    dest: "{{ pgbouncer_conf_dir }}/pgbouncer.ini"
+- name: Configure PGBouncer | Ensure config directory "{{ pgbouncer_conf_dir }}" exist
+  ansible.builtin.file:
+    path: "{{ pgbouncer_conf_dir }}"
+    state: directory
     owner: postgres
     group: postgres
-    mode: 0640
-  notify: restart pgbouncer
-  when: existing_pgcluster is not defined or not existing_pgcluster|bool
+    mode: 0750
   tags: ['pgbouncer']
 
 - name: PGBouncer | Create userlist.txt
@@ -79,6 +76,17 @@
     owner: postgres
     group: postgres
     mode: 0640
+  when: existing_pgcluster is not defined or not existing_pgcluster|bool
+  tags: ['pgbouncer']
+
+- name: PGBouncer | Configure pgbouncer.ini
+  ansible.builtin.template:
+    src: pgbouncer.ini.j2
+    dest: "{{ pgbouncer_conf_dir }}/pgbouncer.ini"
+    owner: postgres
+    group: postgres
+    mode: 0640
+  notify: restart pgbouncer
   when: existing_pgcluster is not defined or not existing_pgcluster|bool
   tags: ['pgbouncer']
 
@@ -145,42 +153,5 @@
       when: not with_haproxy_load_balancing|bool and (cluster_vip is defined and cluster_vip | length > 0 )
   when: existing_pgcluster is defined and existing_pgcluster|bool
   tags: ['pgbouncer']
-
-- meta: flush_handlers
-
-- name: PGBouncer | Install PGBouncer Exporter
-  block:
-    - name: PGBouncer | Download PGBouncer Exporter
-      ansible.builtin.get_url:
-        url: https://github.com/prometheus-community/pgbouncer_exporter/releases/download/v0.6.0/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
-        dest: /opt/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
-        mode: '0640'
-        owner: root
-        group: root
-
-    - name: PGBouncer | Unarchive PGBouncer Exporter
-      ansible.builtin.unarchive:
-        src: /opt/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
-        dest: /opt/
-        remote_src: yes
-
-    - name: PGBouncer | Move PGBouncer Exporter in bin directory
-      ansible.builtin.copy:
-        src: /opt/pgbouncer_exporter-0.6.0.linux-amd64/pgbouncer_exporter
-        dest: "{{ pgbouncer_bin_dir }}/pgbouncer_exporter"
-        owner: root
-        group: root
-        mode: 0755
-        remote_src: yes
-
-    - name: PGBouncer | Install PGBouncer Exporter service
-      ansible.builtin.template:
-        src: pgbouncer-exporter.service.j2
-        dest: /etc/systemd/system/pgbouncer-exporter.service
-        owner: root
-        group: root
-        mode: 0644
-  notify: restart pgbouncer-exporter
-  tags: ['pgbouncer', 'exporter']
 
 - meta: flush_handlers

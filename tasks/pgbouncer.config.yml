@@ -1,81 +1,105 @@
 ---
-- name: Configure PGBouncer | Ensure config directory "{{ pgbouncer_conf_dir }}" exist
-  ansible.builtin.file:
-    path: "{{ pgbouncer_conf_dir }}"
-    state: directory
-    owner: postgres
-    group: postgres
-    mode: 0750
-  tags: ['config_pgbouncer']
 
-# Calculate pool_size for defined pgbouncer_pools (if not defined pool_size, then calculate as pgbouncer_default_pool_size)
-- name: Configure PGBouncer | Calculate pool_size
+- name: PGBouncer | Calculate pool_size
   ansible.builtin.set_fact:
     defined_pool_size: "{{ defined_pool_size|default(0)|int + item.pool_parameters|regex_search('pool_size=(\\d+)')|regex_replace('[^0-9]', '')|default(pgbouncer_default_pool_size, true)|int }}"
   loop: "{{ pgbouncer_pools }}"
-  tags: ['config_pgbouncer']
+  tags: ['pgbouncer']
 
-- name: Configure PGBouncer | Calculate total_pool_size
+- name: PGBouncer | Calculate total_pool_size
   ansible.builtin.set_fact:
     total_pool_size: "{{ defined_pool_size|default(0)|int + (postgresql_databases|length|int - pgbouncer_pools|length|int) * pgbouncer_default_pool_size|int }}"
-  tags: ['config_pgbouncer']
+  tags: ['pgbouncer']
 
-- name: Configure PGBouncer | Set default value to max_connections
+- name: PGBouncer | Set default value to max_connections
   ansible.builtin.set_fact:
     max_connections: 100
-  tags: ['config_pgbouncer']
+  tags: ['pgbouncer']
 
-- name: Configure PGBouncer | Set max_connections from vars if it defined
+- name: PGBouncer | Set max_connections from vars if it defined
   ansible.builtin.set_fact:
     max_connections: "{{ item.value|default(100, true) }}"
   when: item.option == "max_connections"
   loop: "{{ postgresql_parameters }}"
-  tags: ['config_pgbouncer']
+  tags: ['pgbouncer']
 
-- name: Configure PGBouncer | Failed when total_pool_size > max_connections
+- name: PGBouncer | Failed when total_pool_size > max_connections
   ansible.builtin.fail:
     msg: "total_pool_size: {{ total_pool_size  }} > max_connections: {{ max_connections }}. Need change settings"
   when: pgbouncer_pools is defined and pgbouncer_pools | length > 0 and total_pool_size | int > max_connections | int
-  tags: ['config_pgbouncer']
+  tags: ['pgbouncer']
 
-- name: Configure PGBouncer | Update pgbouncer.ini
-  ansible.builtin.template:
-    src: pgbouncer.ini.j2
-    dest: "{{ pgbouncer_conf_dir }}/pgbouncer.ini"
-    owner: postgres
-    group: postgres
-    mode: 0640
-  notify: restart pgbouncer
-  when: existing_pgcluster is not defined or not existing_pgcluster|bool
-  tags: ['config_pgbouncer']
+- name: PGBouncer | Generate /etc/pgbouncer/userlist.txt
+  block:
+    - name: PGBouncer | Get users and password md5 from pg_shadow
+      run_once: true
+      become: true
+      become_user: postgres
+      ansible.builtin.command: >
+        {{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -U {{ patroni_superuser_username }} -d postgres -Atq
+        -c "SELECT concat('\"', usename, '\" \"', passwd, '\"') FROM pg_shadow where usename = '{{ item }}'"
+      loop: "{{ pgbouncer_userlist }}"
+      register: pg_shadow_result
+      changed_when: false
+      when: pgbouncer_generate_userlist|bool and is_master is defined
+      tags: ['pgbouncer']
+
+    - name: PGBouncer | Clear /etc/pgbouncer/userlist.txt
+      become: true
+      become_user: postgres
+      ansible.builtin.copy:
+        content: ''
+        dest: /etc/pgbouncer/userlist.txt
+    
+    - name: PGBouncer | Generate /etc/pgbouncer/userlist.txt
+      become: true
+      become_user: postgres
+      ansible.builtin.shell: >
+        echo '{{ item.stdout }}' >> /etc/pgbouncer/userlist.txt
+      notify: reload pgbouncer
+      when:
+        - item.rc == 0
+        - item.stdout is defined
+        - item.stdout | length > 0
+        - pgbouncer_generate_userlist|bool
+      with_items: "{{ pg_shadow_result.results }}"
+      tags: ['pgbouncer']
 
 - meta: flush_handlers
 
-- name: Configure PGBouncer | Get users and password md5 from pg_shadow
-  run_once: true
-  become: true
-  become_user: postgres
-  ansible.builtin.command: >
-    {{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -U {{ patroni_superuser_username }} -d postgres -Atq
-    -c "SELECT concat('\"', usename, '\" \"', passwd, '\"') FROM pg_shadow where usename != '{{ patroni_replication_username }}'"
-  register: pg_shadow_result
-  changed_when: false
-  when: pgbouncer_generate_userlist|bool and is_master is defined
-  tags: ['config_pgbouncer']
+- name: PGBouncer | Install PGBouncer Exporter
+  block:
+    - name: PGBouncer | Download PGBouncer Exporter
+      ansible.builtin.get_url:
+        url: https://github.com/prometheus-community/pgbouncer_exporter/releases/download/v0.6.0/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
+        dest: /opt/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
+        mode: '0640'
+        owner: root
+        group: root
 
-- name: Configure PGBouncer | Generate /etc/pgbouncer/userlist.txt
-  become: true
-  become_user: postgres
-  ansible.builtin.copy:
-    content: |
-      {{ pg_shadow_result.stdout }}
-    dest: /etc/pgbouncer/userlist.txt
-  notify: reload pgbouncer
-  when:
-    - pg_shadow_result.rc == 0
-    - pg_shadow_result.stdout is defined
-    - pg_shadow_result.stdout | length > 0
-    - pgbouncer_generate_userlist|bool
-  tags: ['config_pgbouncer']
+    - name: PGBouncer | Unarchive PGBouncer Exporter
+      ansible.builtin.unarchive:
+        src: /opt/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: PGBouncer | Move PGBouncer Exporter in bin directory
+      ansible.builtin.copy:
+        src: /opt/pgbouncer_exporter-0.6.0.linux-amd64/pgbouncer_exporter
+        dest: "{{ pgbouncer_bin_dir }}/pgbouncer_exporter"
+        owner: root
+        group: root
+        mode: 0755
+        remote_src: yes
+
+    - name: PGBouncer | Install PGBouncer Exporter service
+      ansible.builtin.template:
+        src: pgbouncer-exporter.service.j2
+        dest: /etc/systemd/system/pgbouncer-exporter.service
+        owner: root
+        group: root
+        mode: 0644
+  notify: restart pgbouncer-exporter
+  tags: ['pgbouncer', 'exporter']
 
 - meta: flush_handlers

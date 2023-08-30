@@ -1,0 +1,168 @@
+---
+
+- name: Patroni | Start Patroni on master
+  block:
+    - name: Patroni | Start patroni service on the Master server
+      ansible.builtin.systemd:
+        daemon_reload: true
+        name: patroni
+        state: restarted
+        enabled: true
+
+    - name: "Patroni | Wait for port {{ patroni_restapi_port }} to become open on the host"
+      ansible.builtin.wait_for:
+        port: "{{ patroni_restapi_port }}"
+        host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
+        state: started
+        timeout: 120
+        delay: 10
+      ignore_errors: false
+
+    - name: Patroni | Check PostgreSQL is started and accepting connections on Master
+      become: true
+      become_user: postgres
+      ansible.builtin.command: "{{ postgresql_bin_dir }}/pg_isready -p {{ postgresql_port }}"
+      register: pg_isready_result
+      until: pg_isready_result.rc == 0
+      retries: 1000
+      delay: 30
+      changed_when: false
+
+    - name: Patroni | Wait for the cluster to initialize (master is the leader with the lock)
+      ansible.builtin.uri:
+        url: "http://{{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ patroni_restapi_port }}/leader"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 10
+      delay: 2
+      when: patroni_standby_cluster.host is not defined or patroni_standby_cluster.host | length < 1
+  when: is_master is defined and is_master|bool
+  tags: ['patroni']
+
+- name: PostgreSQL | Generate pg_hba.conf when PostgreSQL does not exist
+  block:
+    - name: PostgreSQL | Generate pg_hba.conf
+      ansible.builtin.template:
+        src: pg_hba.conf.j2
+        dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+        owner: postgres
+        group: postgres
+        mode: 0640
+      register: generate_pg_hba
+      when: (is_master is defined and is_master|bool) or
+            ((is_master is undefined and postgresql_conf_dir != postgresql_data_dir)
+            or postgresql_exists == "true")
+
+    - name: PostgreSQL | reload for apply the pg_hba.conf
+      become: true
+      become_user: postgres
+      ansible.builtin.command: "{{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -c 'SELECT pg_reload_conf()'"
+      register: psql_reload_result
+      changed_when: psql_reload_result.rc == 0
+      failed_when: false
+      when: generate_pg_hba is changed
+  when: existing_pgcluster is not defined or not existing_pgcluster|bool
+  tags: ['patroni']
+
+- name: PostgreSQL | Add only one Patroni node | add_pgnode.yml
+  block:
+    - name: PostgreSQL | fetch pg_hba.conf file from master
+      run_once: true
+      ansible.builtin.fetch:
+        src: "{{ postgresql_conf_dir }}/pg_hba.conf"
+        dest: files/pg_hba.conf
+        validate_checksum: true
+        flat: true
+      when: is_master is defined and is_master|bool
+
+    - name: PostgreSQL | copy pg_hba.conf file to replica
+      ansible.builtin.copy:
+        src: files/pg_hba.conf
+        dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+        owner: postgres
+        group: postgres
+        mode: 0640
+  when: existing_pgcluster is defined and existing_pgcluster|bool
+        and postgresql_conf_dir != postgresql_data_dir
+  tags: ['patroni']
+
+- name: Patroni | Start Patroni on replicas
+  block:
+    - name: Patroni | Start patroni service on Replica servers
+      ansible.builtin.systemd:
+        daemon_reload: true
+        name: patroni
+        state: restarted
+        enabled: true
+
+    - name: Patroni | "Wait for port {{ patroni_restapi_port }} to become open on the host"
+      ansible.builtin.wait_for:
+        port: "{{ patroni_restapi_port }}"
+        host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
+        state: started
+        timeout: 120
+        delay: 10
+      ignore_errors: false
+
+    - name: Patroni | Check that the patroni is healthy on the replica server
+      ansible.builtin.uri:
+        url: "http://{{ hostvars[inventory_hostname]['inventory_hostname'] }}:{{ patroni_restapi_port }}/health"
+        status_code: 200
+      register: replica_result
+      until: replica_result.status == 200
+      retries: 1200 
+      delay: 30
+  when: is_master is not defined or not is_master|bool
+  tags: ['patroni']
+
+- name: WAL | Configure a custom WAL
+  import_tasks: custom_wal_dir.yml
+  when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
+  tags: ['patroni']
+
+- name: PostgreSQL | Disable postgresql from autostart
+  block:
+    - name: PostgreSQL | Turning off postgresql autostart from config "start.conf" (will be managed by patroni)
+      ansible.builtin.copy:
+        dest: "{{ postgresql_conf_dir }}/start.conf"
+        content: "manual"
+        owner: postgres
+        group: postgres
+        mode: 0644
+
+    - name: PostgreSQL | Disable "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}" service
+      ansible.builtin.systemd:
+        name: "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}"
+        enabled: false
+        daemon_reload: true
+  tags: ['patroni']
+
+- name: Patroni | Add PATRONICTL_CONFIG_FILE environment variable into /etc/environment
+  ansible.builtin.lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^PATRONICTL_CONFIG_FILE"
+    line: "PATRONICTL_CONFIG_FILE=/etc/patroni/patroni.yml"
+    owner: root
+    group: root
+    mode: '0644'
+  ignore_errors: true
+  tags: ['patroni']
+
+- name: PostgreSQL | Create secondary PostgreSQL users
+  become: true
+  become_user: postgres
+  ansible.builtin.postgresql_user:
+    db: postgres
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    encrypted: true
+    role_attr_flags: "LOGIN,REPLICATION"
+    login_unix_socket: "{{ postgresql_unix_socket_dir }}"
+    port: "{{ postgresql_port }}"
+    state: present
+  with_items: "{{ postgresql_secondary_users }}"
+  when: (postgresql_secondary_users is defined and postgresql_secondary_users | length > 0)
+        and (is_master is defined and is_master|bool)
+  tags: ['postgresql']

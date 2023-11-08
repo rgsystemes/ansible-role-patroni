@@ -124,7 +124,8 @@ postgresql_parameters:
   - { option: "max_wal_senders", value: "10" }
   - { option: "max_wal_size", value: "8GB" }  # Or 16GB / 32GB
   - { option: "min_wal_size", value: "2GB" }
-  - { option: "password_encryption", value: "{{ postgresql_password_encryption_algorithm }}" }  - { option: "shared_buffers", value: "{{ (ansible_memtotal_mb * 0.25)|int }}MB" }
+  - { option: "password_encryption", value: "{{ postgresql_password_encryption_algorithm }}" }  
+  - { option: "shared_buffers", value: "{{ (ansible_memtotal_mb * 0.25)|int }}MB" }
   - { option: "pg_stat_statements.max", value: "10000" }
   - { option: "pg_stat_statements.save", value: "true" }
   - { option: "pg_stat_statements.track", value: "all" }

@@ -103,7 +103,7 @@ postgresql_parameters:
   - { option: "logging_collector", value: "true" }
   - { option: "log_checkpoints", value: "true" }
   - { option: "log_directory", value: "{{ postgresql_log_dir }}" }
-  - { option: "log_filename", value: "postgresql-%a.log" }
+  - { option: "log_filename", value: "postgresql.log" }
   - { option: "log_line_prefix", value: "'%t [%p-%l] %r %q%u@%d '" }
   - { option: "log_lock_waits", value: "true" }
   - { option: "log_rotation_age", value: "1d" }
@@ -244,9 +244,9 @@ patroni_log_destination: logfile
 patroni_log_level: info
 patroni_log_traceback_level: error
 patroni_log_format: "%(asctime)s %(levelname)s: %(message)s"
-patroni_log_dateformat: ""
+patroni_log_dateformat: "%Y-%m-%d %r"
 patroni_log_max_queue_size: 1000
-patroni_log_file_num: 4
+patroni_log_file_num: 14
 patroni_log_file_size: 25000000  # bytes
 patroni_log_loggers_patroni_postmaster: warning
 patroni_log_loggers_urllib3: warning 

@@ -1,0 +1,12 @@
+/var/log/postgresql/postgresql.log {
+    daily
+    rotate 14
+    dateext
+    dateformat -%Y%m%d
+    copytruncate
+    delaycompress
+    compress
+    notifempty
+    missingok
+    su root root
+}

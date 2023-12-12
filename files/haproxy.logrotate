@@ -1,0 +1,13 @@
+/var/log/haproxy/haproxy.log {
+    daily
+    rotate 14
+    dateext
+    dateformat -%Y%m%d
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+}

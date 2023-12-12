@@ -116,3 +116,9 @@
   when: ansible_selinux.status is defined and ansible_selinux.status == 'enabled'
   ignore_errors: true
   tags: ['haproxy']
+
+- name: HAProxy | Update log rotation with logrotate
+  ansible.builtin.copy:
+    src: haproxy.logrotate
+    dest: /etc/logrotate.d/haproxy
+  tags: ['haproxy']

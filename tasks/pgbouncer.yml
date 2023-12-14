@@ -27,7 +27,7 @@
 
 - name: PGBouncer | Enable log rotation with logrotate
   ansible.builtin.copy:
-    src: pgbouncer
+    src: pgbouncer.logrotate
     dest: /etc/logrotate.d/pgbouncer
   tags: ['pgbouncer']
 

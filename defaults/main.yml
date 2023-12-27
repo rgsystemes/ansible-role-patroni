@@ -180,7 +180,7 @@ ssh_known_hosts: "{% if 'patroni' in group_names %}{{ groups['patroni'] }}{% els
 haproxy_version: "2.2.9-2+deb11u5"
 cluster_vip: "0.0.0.0" # To change
 vip_interface: "{{ ansible_default_ipv4.interface }}" 
-with_haproxy_load_balancing: true  # or 'true' if you want to install and configure the load-balancing
+with_haproxy_load_balancing: true
 haproxy_listen_port:
   master: 5000
   replicas: 5001

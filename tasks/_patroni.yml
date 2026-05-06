@@ -2,14 +2,14 @@
 - name: Patroni | Install Patroni
   block:
     - name: Patroni | Copy patroni requirements.txt file
-      ansible.builtin.copy:
-        src: requirements.txt
+      ansible.builtin.template:
+        src: requirements.txt.j2
         dest: /tmp/requirements.txt
 
     - name: Patroni | Install setuptools
       ansible.builtin.pip:
-        name: setuptools<66.0.0
-        state: latest
+        name: "{{ 'setuptools>=67.0.0' if ansible_facts['distribution_release'] == 'trixie' else 'setuptools<66.0.0' }}"
+        state: present
         executable: pip3
         extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
         umask: "0022"
@@ -65,66 +65,6 @@
     state: directory
     mode: 0750
   when: patroni_log_destination == 'logfile'
-  tags: patroni
-
-- name: Patroni | Add only one Patroni node | add_pgnode.yml
-  block:
-    - name: Patroni | Fetch patroni.yml conf file from master
-      run_once: true
-      ansible.builtin.fetch:
-        src: /etc/patroni/patroni.yml
-        dest: files/patroni.yml
-        validate_checksum: true
-        flat: true
-      when: is_master is defined and is_master|bool
-
-    - name: Patroni | Copy patroni.yml conf file to replica
-      ansible.builtin.copy:
-        src: files/patroni.yml
-        dest: /etc/patroni/patroni.yml
-        owner: postgres
-        group: postgres
-        mode: 0640
-
-    - name: Patroni | Remove patroni.yml conf files from localhost
-      run_once: true
-      ansible.builtin.file:
-        path: files/patroni.yml
-        state: absent
-      delegate_to: localhost
-
-    - name: Patroni | Prepare patroni.yml conf file (replace "name","listen","connect_address")
-      ansible.builtin.lineinfile:
-        path: /etc/patroni/patroni.yml
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
-        backrefs: true
-      loop:
-        - { regexp: '^name:', line: 'name: {{ ansible_hostname }}' }
-        - { regexp: '^  listen: .*:{{ patroni_restapi_port }}$', line: '  listen: {{ hostvars[inventory_hostname].inventory_hostname }}:{{ patroni_restapi_port }}' }
-        - { regexp: '^  connect_address: .*:{{ patroni_restapi_port }}$', line: '  connect_address: {{ hostvars[inventory_hostname].inventory_hostname }}:{{ patroni_restapi_port }}' }
-        - { regexp: '^  listen: ((?!{{ patroni_restapi_port }}).)*$', line: '  listen: {{ hostvars[inventory_hostname].inventory_hostname }},127.0.0.1:{{ postgresql_port }}' }
-        - { regexp: '^  connect_address: ((?!{{ patroni_restapi_port }}).)*$', line: '  connect_address: {{ hostvars[inventory_hostname].inventory_hostname }}:{{ postgresql_port }}' }
-      loop_control:
-        label: "{{ item.line }}"
-      when: with_haproxy_load_balancing|bool or pgbouncer_install|bool or (cluster_vip is not defined or cluster_vip | length < 1)
-
-    - name: Patroni | Prepare patroni.yml conf file (replace "name","listen","connect_address")
-      ansible.builtin.lineinfile:
-        path: /etc/patroni/patroni.yml
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
-        backrefs: true
-      loop:
-        - { regexp: '^name:', line: 'name: {{ ansible_hostname }}' }
-        - { regexp: '^  listen: .*:{{ patroni_restapi_port }}$', line: '  listen: {{ hostvars[inventory_hostname].inventory_hostname }}:{{ patroni_restapi_port }}' }
-        - { regexp: '^  connect_address: .*:{{ patroni_restapi_port }}$', line: '  connect_address: {{ hostvars[inventory_hostname].inventory_hostname }}:{{ patroni_restapi_port }}' }
-        - { regexp: '^  listen: ((?!{{ patroni_restapi_port }}).)*$', line: '  listen: {{ hostvars[inventory_hostname].inventory_hostname }},{{ cluster_vip }},127.0.0.1:{{ postgresql_port }}' }
-        - { regexp: '^  connect_address: ((?!{{ patroni_restapi_port }}).)*$', line: '  connect_address: {{ hostvars[inventory_hostname].inventory_hostname }}:{{ postgresql_port }}' }
-      loop_control:
-        label: "{{ item.line }}"
-      when: not with_haproxy_load_balancing|bool and not pgbouncer_install|bool and (cluster_vip is defined and cluster_vip | length > 0)
-  when: existing_pgcluster is defined and existing_pgcluster|bool
   tags: patroni
 
 - name: Patroni | Copy systemd service file "/etc/systemd/system/patroni.service"

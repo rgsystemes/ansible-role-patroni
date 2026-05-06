@@ -7,7 +7,7 @@
       loop: "{{ hostvars[inventory_hostname].group_names }}"
 
     - name: Sysctl | Apply new kernel parameters
-      ansible.builtin.sysctl:
+      ansible.posix.sysctl:
         name: "{{ item.name }}"
         value: "{{ item.value }}"
         sysctl_set: true

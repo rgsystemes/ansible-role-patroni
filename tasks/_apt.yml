@@ -11,9 +11,7 @@
 
 - name: Apt | Install packages
   ansible.builtin.apt:
-    pkg:
-      - gnupg
-      - apt-transport-https
+    name:
       - iproute2
       - python3-psycopg2
       - iptables

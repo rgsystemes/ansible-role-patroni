@@ -1,6 +1,6 @@
 ---
 
-- name: KeepAlived | Install keepalived packages
+- name: KeepAlived | Install Keepalived packages
   ansible.builtin.apt:
     name: "keepalived{% if keepalived_version | length > 0 %}={{ keepalived_version }}{% endif %}"
   register: apt_status
@@ -36,48 +36,6 @@
     group: root
     mode: 0644
   notify: restart keepalived
-  when: add_balancer is not defined or not add_balancer|bool
-  tags: keepalived
-
-- name: KeepAlived | Add only an KeepAlived node | add_balancers.yml
-  block:
-    - name: "Fetch keepalived.conf conf file from {{ groups.balancers[0] }}"
-      run_once: true
-      ansible.builtin.fetch:
-        src: "{{ keepalived_conf_dir }}/keepalived.conf"
-        dest: files/keepalived.conf
-        validate_checksum: true
-        flat: true
-      delegate_to: "{{ item }}"
-      with_items:
-        - "{{ groups.balancers[0]|default([]) }}"
-        - "{{ groups.patroni[0]|default([]) }}"
-
-    - name: KeepAlived | Copy keepalived.conf conf file to replica
-      ansible.builtin.copy:
-        src: files/keepalived.conf
-        dest: /etc/keepalived/keepalived.conf
-      notify: restart keepalived
-
-    - name: KeepAlived | Remove keepalived.conf file from localhost
-      run_once: true
-      ansible.builtin.file:
-        path: files/keepalived.conf
-        state: absent
-      delegate_to: localhost
-
-    - name: KeepAlived | Prepare keepalived.conf conf file (replace "interface")
-      ansible.builtin.lineinfile:
-        path: "{{ keepalived_conf_dir }}/keepalived.conf"
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
-        backrefs: true
-      loop:
-        - { regexp: '^.*interface', line: '   interface {{ vip_interface }}' }
-      loop_control:
-        label: "{{ item.line }}"
-      notify: restart keepalived
-  when: add_balancer is defined and add_balancer|bool
   tags: keepalived
 
 - meta: flush_handlers
@@ -113,6 +71,6 @@
         group: root
         mode: 0644
   notify: restart keepalived-exporter
-  tags: [''keepalived'', ''exporter'']
+  tags: ['keepalived', 'exporter']
 
 - meta: flush_handlers

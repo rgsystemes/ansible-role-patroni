@@ -22,10 +22,10 @@
       changed_when: false
 
     - name: SSH | Copy key files and add to authorized_keys
-      ansible.builtin.authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ ssh_key_user }}"
         state: present
-        key: "{{ lookup(pipe,'cat files/*id_rsa.pub') }}"
+        key: "{{ lookup('pipe','cat files/*id_rsa.pub') }}"
         exclusive: false
 
     - name: SSH | known_hosts | For each host, scan for its ssh public key

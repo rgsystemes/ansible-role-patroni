@@ -14,8 +14,7 @@
 
 - name: Etcd cluster | Install etcd
   include_tasks: _etcd.yml
-  when: not dcs_exists|bool and
-        (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["etcd"]|default([]))
+  when: not dcs_exists | bool and inventory_hostname in groups["patroni"]
   tags: etcd
 
 - name: PostgreSQL cluster | Install PostgreSQL cluster
@@ -47,7 +46,7 @@
     - name: SSH | Manage SSH keys
       include_tasks: _ssh.yml
       tags: ssh
-  when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
+  when: inventory_hostname in groups["patroni"]
   tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
 
 - name: Balancers cluster | Install PostgreSQL cluster
@@ -88,7 +87,7 @@
       include_tasks: _pgbouncer.config.yml
       tags: ['pgbouncer', 'exporter']
 
-  when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
+  when: inventory_hostname in groups["patroni"]
   tags: ['pgbouncer', 'postgresql', 'patroni', 'exporter']
 
 - name: Info | Get informations of cluster

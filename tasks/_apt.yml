@@ -7,7 +7,7 @@
   until: apt_status is success
   delay: 5
   retries: 3
-  tags: ['apt']
+  tags: apt
 
 - name: Apt | Install packages
   ansible.builtin.apt:
@@ -22,4 +22,4 @@
   until: apt_status is success
   delay: 5
   retries: 3
-  tags: ['apt']
+  tags: apt

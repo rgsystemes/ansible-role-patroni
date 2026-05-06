@@ -36,7 +36,7 @@
       when: patroni_install_version != "latest"
   vars:
     ansible_python_interpreter: /usr/bin/python3
-  tags: ['patroni']
+  tags: patroni
 
 - name: Patroni | Create conf directory
   ansible.builtin.file:
@@ -45,7 +45,7 @@
     owner: postgres
     group: postgres
     mode: 0750
-  tags: ['patroni']
+  tags: patroni
 
 - name: Patroni | Generate conf file "{{ patroni_conf_dir }}/patroni.yml"
   ansible.builtin.template:
@@ -55,7 +55,7 @@
     group: postgres
     mode: 0640
   when: existing_pgcluster is not defined or not existing_pgcluster|bool
-  tags: ['patroni']
+  tags: patroni
 
 - name: Patroni | Create patroni log directory
   ansible.builtin.file:
@@ -65,7 +65,7 @@
     state: directory
     mode: 0750
   when: patroni_log_destination == 'logfile'
-  tags: ['patroni']
+  tags: patroni
 
 - name: Patroni | Add only one Patroni node | add_pgnode.yml
   block:
@@ -125,7 +125,7 @@
         label: "{{ item.line }}"
       when: not with_haproxy_load_balancing|bool and not pgbouncer_install|bool and (cluster_vip is defined and cluster_vip | length > 0)
   when: existing_pgcluster is defined and existing_pgcluster|bool
-  tags: ['patroni']
+  tags: patroni
 
 - name: Patroni | Copy systemd service file "/etc/systemd/system/patroni.service"
   ansible.builtin.template:
@@ -134,4 +134,4 @@
     owner: postgres
     group: postgres
     mode: 0644
-  tags: ['patroni']
+  tags: patroni

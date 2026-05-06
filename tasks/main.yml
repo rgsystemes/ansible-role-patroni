@@ -16,37 +16,37 @@
   include_tasks: _etcd.yml
   when: not dcs_exists|bool and
         (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["etcd"]|default([]))
-  tags: ['etcd']
+  tags: etcd
 
 - name: PostgreSQL cluster | Install PostgreSQL cluster
   block:
     - name: PostgreSQL | Install PosgreSQL
       include_tasks: _postgresql.yml
-      tags: ['postgresql']
+      tags: postgresql
 
     - name: Swap | Manage swap
       include_tasks: _swap.yml
-      tags: ['swap']
+      tags: swap
 
     - name: THP | Disable Transparent Huge Pages
       include_tasks: _thp.yml
-      tags: ['thp']
+      tags: thp
 
     - name: PAM | Manage PAM limits
       include_tasks: _pam.yml
-      tags: ['pam']
+      tags: pam
 
     - name: IO Scheduler | Manage IO Scheduler
       include_tasks: _ioscheduler.yml
-      tags: ['ioscheduler']
+      tags: ioscheduler
 
     - name: Locales | Manage locales
       include_tasks: _locales.yml
-      tags: ['locales']
+      tags: locales
 
     - name: SSH | Manage SSH keys
       include_tasks: _ssh.yml
-      tags: ['ssh']
+      tags: ssh
   when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["postgresql"]|default([]))
   tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
 
@@ -54,35 +54,35 @@
   block:
     - name: HAProxy | Install HAProxy
       include_tasks: _haproxy.yml
-      tags: ['haproxy']
+      tags: haproxy
 
     - name: Confd | Install Confd
       include_tasks: _confd.yml
-      tags: ['confd']
+      tags: confd
 
     - name: KeepAlived | Install KeepAlived
       include_tasks: _keepalived.yml
-      tags: ['keepalived']
-  when: (inventory_hostname in groups["patroni"]|default([]) or inventory_hostname in groups["balancers"]|default([]))
+      tags: keepalived
+  when: inventory_hostname in groups["patroni"]
   tags: ['haproxy', 'confd', 'keepalived', 'exporter']
 
 - name: PostgreSQL cluster | Install Patroni/PGBouncer cluster
   block:
     - name: PGBouncer | Install PGBouncer
       include_tasks: _pgbouncer.yml
-      tags: ['pgbouncer']
+      tags: pgbouncer
 
     - name: PostgreSQL | Preconfigure PostgreSQL
       include_tasks: _postgresql.preconfig.yml
-      tags: ['postgresql']
+      tags: postgresql
 
     - name: Patroni | Install Patroni
       include_tasks: _patroni.yml
-      tags: ['patroni']
+      tags: patroni
 
     - name: Patroni | Start Patroni
       include_tasks: _patroni.start.yml
-      tags: ['patroni']
+      tags: patroni
 
     - name: PGBouncer | Configure PGBouncer
       include_tasks: _pgbouncer.config.yml
@@ -93,4 +93,4 @@
 
 - name: Info | Get informations of cluster
   include_tasks: _info.yml
-  tags: ['info']
+  tags: info

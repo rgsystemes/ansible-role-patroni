@@ -16,4 +16,4 @@
       loop: "{{ sysctl_conf_dynamic_var | default([]) }}"
       when: sysctl_conf_dynamic_var | default([]) | length > 0
   when: sysctl_set|bool
-  tags: ['sysctl']
+  tags: sysctl

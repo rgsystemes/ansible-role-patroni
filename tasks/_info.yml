@@ -16,7 +16,7 @@
       ansible.builtin.debug:
         var: patronictl_result.stdout_lines
   ignore_errors: true
-  tags: ['info']
+  tags: info
 
 - name: Info | Display cluster PostgreSQL databases
   block:
@@ -55,7 +55,7 @@
       ansible.builtin.debug:
         var: dbs_result.stdout_lines
   ignore_errors: true
-  tags: ['info']
+  tags: info
 
 - name: Info | Display cluster PostgreSQL connections informations
   block:
@@ -99,7 +99,7 @@
         - not with_haproxy_load_balancing | bool
   when: cluster_vip is defined and cluster_vip | length > 0
   ignore_errors: true
-  tags: ['info']
+  tags: info
 
 - name: Info | Display cluster VIP informations
   block:
@@ -117,7 +117,7 @@
       when: man_ip is defined and man_ip == cluster_vip
   when: (cluster_vip is defined and cluster_vip | length > 0)
   ignore_errors: true
-  tags: ['info']
+  tags: info
 
 
 - name: Info | Display nodes informations
@@ -168,4 +168,4 @@
         - not with_haproxy_load_balancing | bool
   ignore_errors: true
   when: cluster_vip is not defined or cluster_vip | length < 1
-  tags: ['info']
+  tags: info

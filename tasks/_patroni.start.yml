@@ -37,7 +37,7 @@
       delay: 2
       when: patroni_standby_cluster.host is not defined or patroni_standby_cluster.host | length < 1
   when: is_master is defined and is_master|bool
-  tags: ['patroni']
+  tags: patroni
 
 - name: PostgreSQL | Generate pg_hba.conf when PostgreSQL does not exist
   block:
@@ -62,7 +62,7 @@
       failed_when: false
       when: generate_pg_hba is changed
   when: existing_pgcluster is not defined or not existing_pgcluster|bool
-  tags: ['patroni']
+  tags: patroni
 
 - name: PostgreSQL | Add only one Patroni node | add_pgnode.yml
   block:
@@ -84,7 +84,7 @@
         mode: 0640
   when: existing_pgcluster is defined and existing_pgcluster|bool
         and postgresql_conf_dir != postgresql_data_dir
-  tags: ['patroni']
+  tags: patroni
 
 - name: Patroni | Start Patroni on replicas
   block:
@@ -113,12 +113,12 @@
       retries: 1200 
       delay: 30
   when: is_master is not defined or not is_master|bool
-  tags: ['patroni']
+  tags: patroni
 
 - name: WAL | Configure a custom WAL
   import_tasks: custom_wal_dir.yml
   when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
-  tags: ['patroni']
+  tags: patroni
 
 - name: PostgreSQL | Disable postgresql from autostart
   block:
@@ -135,7 +135,7 @@
         name: "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}"
         enabled: false
         daemon_reload: true
-  tags: ['patroni']
+  tags: patroni
 
 - name: Patroni | Add PATRONICTL_CONFIG_FILE environment variable into /etc/environment
   ansible.builtin.lineinfile:
@@ -147,7 +147,7 @@
     group: root
     mode: '0644'
   ignore_errors: true
-  tags: ['patroni']
+  tags: patroni
 
 - name: PostgreSQL | Create secondary PostgreSQL users
   become: true
@@ -164,4 +164,4 @@
   with_items: "{{ postgresql_secondary_users }}"
   when: (postgresql_secondary_users is defined and postgresql_secondary_users | length > 0)
         and (is_master is defined and is_master|bool)
-  tags: ['postgresql']
+  tags: postgresql

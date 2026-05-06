@@ -8,6 +8,6 @@
     mode: 0644
   notify: restart disable-thp
   when: (disable_thp is defined and disable_thp|bool)
-  tags: ['thp']
+  tags: thp
 
 - meta: flush_handlers

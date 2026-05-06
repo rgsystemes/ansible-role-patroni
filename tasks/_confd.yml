@@ -9,7 +9,7 @@
   loop:
     - "{{ confd_package_repo }}"
   when: confd_package_repo | length > 0
-  tags: ['confd']
+  tags: confd
 
 - name: Confd | Create conf directories
   ansible.builtin.file:
@@ -21,7 +21,7 @@
   loop:
     - /etc/confd/conf.d
     - /etc/confd/templates
-  tags: ['confd']
+  tags: confd
 
 - name: Confd | Generate configuration files
   ansible.builtin.template:
@@ -39,7 +39,7 @@
   - src: haproxy.tmpl.j2
     dest: /etc/confd/templates/haproxy.tmpl
   when: add_balancer is not defined or not add_balancer|bool
-  tags: ['confd']
+  tags: confd
 
 - name: Confd | Add only an Confd node | add_balancers.yml
   block:
@@ -113,13 +113,13 @@
       notify: restart confd
       when: cluster_vip is not defined or cluster_vip | length < 1
   when: add_balancer is defined and add_balancer|bool
-  tags: ['confd']
+  tags: confd
 
 - name: Confd | Copy systemd service file
   ansible.builtin.copy:
     src: confd.service
     dest: /etc/systemd/system/confd.service
   notify: restart confd
-  tags: ['confd']
+  tags: confd
 
 - meta: flush_handlers

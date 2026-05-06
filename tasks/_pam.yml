@@ -1,5 +1,4 @@
 ---
-
 - name: PAM | Add or modify nofile limits
   ansible.builtin.pam_limits:
     domain: "{{ limits_user }}"

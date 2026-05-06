@@ -1,5 +1,4 @@
 ---
-
 - name: Confd | Download and copy "confd" binary file to /usr/local/bin/
   ansible.builtin.get_url:
     url: "{{ item }}"

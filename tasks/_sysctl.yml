@@ -1,5 +1,4 @@
 ---
-
 - name: Sysctl | Modify kernel parameters
   block:
     - name: Sysctl | Build a sysctl_conf dynamic variable

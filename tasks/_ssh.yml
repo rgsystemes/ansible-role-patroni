@@ -1,5 +1,4 @@
 ---
-
 - name: SSH | Generate SSH authentication between PostgreSQL servers
   block:
     - name: SSH | Check user "{{ ssh_key_user }}" exists

@@ -1,5 +1,4 @@
 ---
-
 - name: Upgrade /etc/hosts
   ansible.builtin.template:
     src: hosts.j2

@@ -1,5 +1,4 @@
 ---
-
 - name: Info | Display cluster PostgreSQL health
   block:
     - name: Info | Check postgresql cluster health

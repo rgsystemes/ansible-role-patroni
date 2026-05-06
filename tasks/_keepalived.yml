@@ -2,7 +2,7 @@
 
 - name: KeepAlived | Install keepalived packages
   ansible.builtin.apt:
-    name: "keepalived={{ keepalived_version }}"
+    name: "keepalived{% if keepalived_version | length > 0 %}={{ keepalived_version }}{% endif %}"
   register: apt_status
   until: apt_status is success
   delay: 5

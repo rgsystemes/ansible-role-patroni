@@ -1,5 +1,4 @@
 ---
-
 - name: Swap | Ensure swap exists
   ansible.builtin.command: swapon --show=SIZE --bytes --noheadings
   register: swap_exists

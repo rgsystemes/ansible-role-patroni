@@ -1,5 +1,4 @@
 ---
-
 - name: Patroni | Start Patroni on master
   block:
     - name: Patroni | Start patroni service on the Master server

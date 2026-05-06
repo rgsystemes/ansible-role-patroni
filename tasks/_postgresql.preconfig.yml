@@ -1,5 +1,4 @@
 ---
-
 - name: PostgreSQL | create statistics directory (if not already exists)
   ansible.builtin.file:
     path: "{{ postgresql_stats_temp_directory_path }}"

@@ -1,5 +1,4 @@
 ---
-
 - name: PGBouncer | Calculate pool_size
   ansible.builtin.set_fact:
     defined_pool_size: "{{ defined_pool_size|default(0)|int + item.pool_parameters|regex_search('pool_size=(\\d+)')|regex_replace('[^0-9]', '')|default(pgbouncer_default_pool_size, true)|int }}"

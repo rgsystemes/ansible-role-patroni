@@ -2,7 +2,7 @@
 
 - name: HAProxy | Install HAProxy
   ansible.builtin.apt:
-    name: "haproxy={{ haproxy_version }}"
+    name: "haproxy{% if haproxy_version | length > 0 %}={{ haproxy_version }}{% endif %}"
     state: present
     update_cache: yes
   register: apt_status

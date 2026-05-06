@@ -1,7 +1,6 @@
 ---
 # Hardware variables
 openstack: false
-lab: false
 
 # Sysctl variables
 sysctl_set: true
@@ -24,13 +23,35 @@ sysctl_conf:
     - { name: "net.core.somaxconn", value: "65535" }
     - { name: "net.ipv4.tcp_tw_reuse", value: "1" }
 
+# Per-release package versions — empty string means "latest available"
+_haproxy_versions:
+  bullseye: "2.2.9-2+deb11u7"
+  trixie: "3.0.11-1+deb13u2"
+
+_keepalived_versions:
+  bullseye: "1:2.1.5-0.2+deb11u1"
+  trixie: "1:2.3.3-1"
+
+_etcd_packages:
+  bullseye:
+    - "etcd-server=3.3.25+dfsg-6+b6"
+    - "etcd-client=3.3.25+dfsg-6+b6"
+  trixie:
+    - "etcd-server=3.5.16-4"
+    - "etcd-client=3.5.16-4"
+
+_pgbouncer_versions:
+  bullseye: "1.15.0-1+deb11u2"
+  trixie: "1.24.1-1+deb13u1"
+
 # Etcd variables
 dcs_exists: false  # Or 'true' if you don't want to deploy a new etcd cluster
-etcd_version: "3.3.25+dfsg-6"
+etcd_packages: "{{ _etcd_packages[ansible_distribution_release] | default(['etcd-server', 'etcd-client']) }}"
 etcd_cluster_name: "etcd-{{ patroni_cluster_name }}"
 etcd_data_dir: "/var/lib/etcd"
 etcd_conf_dir: "/etc/etcd"
 etcd_cluster_state: "new"
+etcd_peer_address: "{{ ansible_default_ipv4.address }}"
 
 # PostgreSQL variables
 postgresql_version: "12"
@@ -65,7 +86,8 @@ postgresql_pg_ident: []
 postgresql_restore_command: ""
 
 postgresql_apt_repository_keys: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
-postgresql_apt_repository: "deb https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+postgresql_apt_keyring_path: "/etc/apt/keyrings/postgresql.asc"
+postgresql_apt_repository: "deb [signed-by={{ postgresql_apt_keyring_path }}] https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
 postgresql_packages:
   - postgresql-{{ postgresql_version }}
   - postgresql-client-{{ postgresql_version }}
@@ -93,7 +115,7 @@ postgresql_parameters:
   - { option: "checkpoint_completion_target", value: "0.9" }
   - { option: "checkpoint_timeout", value: "15min" }
   - { option: "default_statistics_target", value: "1000" }
-  - { option: "effective_cache_size", value: "{{ (ansible_memtotal_mb * 0.75)|int }}MB" }
+  - { option: "effective_cache_size", value: "{{ (ansible_memtotal_mb * 0.75) | int }}MB" }
   - { option: "effective_io_concurrency", value: "2" }  # Set 200 for SSD storage
   - { option: "hot_standby", value: "true" }
   - { option: "hot_standby_feedback", value: "true" }
@@ -124,8 +146,8 @@ postgresql_parameters:
   - { option: "max_wal_senders", value: "10" }
   - { option: "max_wal_size", value: "8GB" }  # Or 16GB / 32GB
   - { option: "min_wal_size", value: "2GB" }
-  - { option: "password_encryption", value: "{{ postgresql_password_encryption_algorithm }}" }  
-  - { option: "shared_buffers", value: "{{ (ansible_memtotal_mb * 0.25)|int }}MB" }
+  - { option: "password_encryption", value: "{{ postgresql_password_encryption_algorithm }}" }
+  - { option: "shared_buffers", value: "{{ (ansible_memtotal_mb * 0.25) | int }}MB" }
   - { option: "pg_stat_statements.max", value: "10000" }
   - { option: "pg_stat_statements.save", value: "true" }
   - { option: "pg_stat_statements.track", value: "all" }
@@ -177,7 +199,7 @@ ssh_key_user: "postgres"
 ssh_known_hosts: "{% if 'patroni' in group_names %}{{ groups['patroni'] }}{% else %}{{ groups['postgresql'] }}{% endif %}"
 
 # HAProxy variables
-haproxy_version: "2.2.9-2+deb11u5"
+haproxy_version: "{{ _haproxy_versions[ansible_distribution_release] | default('') }}"
 cluster_vip: "0.0.0.0" # To change
 vip_interface: "{{ ansible_default_ipv4.interface }}" 
 with_haproxy_load_balancing: true
@@ -199,13 +221,13 @@ haproxy_timeout:
 confd_package_repo: "https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64"
 
 # Keepalived variables
-keepalived_version: "1:2.1.5-0.2+deb11u1"
+keepalived_version: "{{ _keepalived_versions[ansible_distribution_release] | default('') }}"
 keepalived_scripts_dir: "/usr/libexec/keepalived"
 keepalived_conf_dir: "/etc/keepalived"
 keepalived_bin_dir: "/usr/bin"
 
 # PGBouncer variables
-pgbouncer_version: "1.15.0-1"
+pgbouncer_version: "{{ _pgbouncer_versions[ansible_distribution_release] | default('') }}"
 pgbouncer_install: true
 pgbouncer_generate_userlist: true
 pgbouncer_userlist:
@@ -249,7 +271,7 @@ patroni_log_max_queue_size: 1000
 patroni_log_file_num: 14
 patroni_log_file_size: 25000000  # bytes
 patroni_log_loggers_patroni_postmaster: warning
-patroni_log_loggers_urllib3: warning 
+patroni_log_loggers_urllib3: warning
 
 patroni_etcd_hosts: []
 patroni_restapi_port: 8008
@@ -267,7 +289,7 @@ patroni_postgresql_use_pg_rewind: true
 patroni_standby_cluster:
   host: ""
   port: "5432"
-  
+
 patroni_remove_data_directory_on_rewind_failure: false
 patroni_remove_data_directory_on_diverged_timelines: false
 patroni_callbacks: []

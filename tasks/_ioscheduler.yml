@@ -1,5 +1,4 @@
 ---
-
 - name: IO Scheduler | Create systemd unit file io-scheduler.service
   ansible.builtin.template:
     src: io-scheduler.service.j2

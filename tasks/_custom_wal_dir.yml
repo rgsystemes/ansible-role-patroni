@@ -1,5 +1,4 @@
 ---
-
 - name: "Make sure {{ postgresql_data_dir }}/pg_wal is symlink"
   ansible.builtin.stat:
     path: "{{ postgresql_data_dir }}/pg_wal"

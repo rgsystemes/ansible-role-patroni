@@ -1,5 +1,4 @@
 ---
-
 - name: Patroni | Install Patroni
   block:
     - name: Patroni | Copy patroni requirements.txt file

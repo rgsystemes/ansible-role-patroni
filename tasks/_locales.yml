@@ -1,5 +1,4 @@
 ---
-
 - name: Generate locales
   ansible.builtin.locale_gen:
     name: "{{ item.language_country }}.{{ item.encoding }}"

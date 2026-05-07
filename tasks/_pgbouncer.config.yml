@@ -31,7 +31,6 @@
 - name: PGBouncer | Generate /etc/pgbouncer/userlist.txt
   block:
     - name: PGBouncer | Get users and password md5 from pg_shadow
-      run_once: true
       become: true
       become_user: postgres
       ansible.builtin.command: >
@@ -40,7 +39,6 @@
       loop: "{{ pgbouncer_userlist }}"
       register: pg_shadow_result
       changed_when: false
-      when: pgbouncer_generate_userlist|bool and is_master is defined
       tags: pgbouncer
 
     - name: PGBouncer | Clear /etc/pgbouncer/userlist.txt
@@ -49,7 +47,7 @@
       ansible.builtin.copy:
         content: ''
         dest: /etc/pgbouncer/userlist.txt
-    
+
     - name: PGBouncer | Generate /etc/pgbouncer/userlist.txt
       become: true
       become_user: postgres
@@ -60,9 +58,9 @@
         - item.rc == 0
         - item.stdout is defined
         - item.stdout | length > 0
-        - pgbouncer_generate_userlist|bool
       with_items: "{{ pg_shadow_result.results }}"
       tags: pgbouncer
+  when: pgbouncer_generate_userlist|bool and is_master is defined
 
 - meta: flush_handlers
 
@@ -99,6 +97,6 @@
         group: root
         mode: 0644
   notify: restart pgbouncer-exporter
-  tags: [''pgbouncer'', ''exporter'']
+  tags: ['pgbouncer', 'exporter']
 
 - meta: flush_handlers

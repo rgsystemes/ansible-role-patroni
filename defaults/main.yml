@@ -46,12 +46,11 @@ _pgbouncer_versions:
 
 # Etcd variables
 dcs_exists: false  # Or 'true' if you don't want to deploy a new etcd cluster
-etcd_packages: "{{ _etcd_packages[ansible_distribution_release] | default(['etcd-server', 'etcd-client']) }}"
+etcd_packages: "{{ _etcd_packages[ansible_facts['distribution_release']] | default(['etcd-server', 'etcd-client']) }}"
 etcd_cluster_name: "etcd-{{ patroni_cluster_name }}"
 etcd_data_dir: "/var/lib/etcd"
 etcd_conf_dir: "/etc/etcd"
 etcd_cluster_state: "new"
-etcd_peer_address: "{{ ansible_default_ipv4.address }}"
 
 # PostgreSQL variables
 postgresql_version: "12"
@@ -87,7 +86,7 @@ postgresql_restore_command: ""
 
 postgresql_apt_repository_keys: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
 postgresql_apt_keyring_path: "/etc/apt/keyrings/postgresql.asc"
-postgresql_apt_repository: "deb [signed-by={{ postgresql_apt_keyring_path }}] https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+postgresql_apt_repository: "deb [signed-by={{ postgresql_apt_keyring_path }}] https://apt.postgresql.org/pub/repos/apt/ {{ ansible_facts['distribution_release'] }}-pgdg main"
 postgresql_packages:
   - postgresql-{{ postgresql_version }}
   - postgresql-client-{{ postgresql_version }}
@@ -199,7 +198,7 @@ ssh_key_user: "postgres"
 ssh_known_hosts: "{% if 'patroni' in group_names %}{{ groups['patroni'] }}{% else %}{{ groups['postgresql'] }}{% endif %}"
 
 # HAProxy variables
-haproxy_version: "{{ _haproxy_versions[ansible_distribution_release] | default('') }}"
+haproxy_version: "{{ _haproxy_versions[ansible_facts['distribution_release']] | default('') }}"
 cluster_vip: "0.0.0.0" # To change
 vip_interface: "{{ ansible_default_ipv4.interface }}" 
 with_haproxy_load_balancing: true
@@ -221,13 +220,13 @@ haproxy_timeout:
 confd_package_repo: "https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64"
 
 # Keepalived variables
-keepalived_version: "{{ _keepalived_versions[ansible_distribution_release] | default('') }}"
+keepalived_version: "{{ _keepalived_versions[ansible_facts['distribution_release']] | default('') }}"
 keepalived_scripts_dir: "/usr/libexec/keepalived"
 keepalived_conf_dir: "/etc/keepalived"
 keepalived_bin_dir: "/usr/bin"
 
 # PGBouncer variables
-pgbouncer_version: "{{ _pgbouncer_versions[ansible_distribution_release] | default('') }}"
+pgbouncer_version: "{{ _pgbouncer_versions[ansible_facts['distribution_release']] | default('') }}"
 pgbouncer_install: true
 pgbouncer_generate_userlist: true
 pgbouncer_userlist:
@@ -235,7 +234,7 @@ pgbouncer_userlist:
 pgbouncer_bin_dir: "/usr/bin"
 pgbouncer_conf_dir: "/etc/pgbouncer"
 pgbouncer_log_dir: "/var/log/pgbouncer"
-pgbouncer_listen_addr: "{{ ansible_default_ipv4.address }}"
+pgbouncer_listen_addr: "{{ ansible_facts['default_ipv4']['address'] }}"
 pgbouncer_listen_port: 6432
 pgbouncer_default_pool_size: 20
 pgbouncer_pools:

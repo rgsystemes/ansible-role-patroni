@@ -32,12 +32,12 @@
     mode: 0644
   notify: restart confd
   loop:
-  - src: confd.toml.j2
-    dest: /etc/confd/confd.toml
-  - src: haproxy.toml.j2
-    dest: /etc/confd/conf.d/haproxy.toml
-  - src: haproxy.tmpl.j2
-    dest: /etc/confd/templates/haproxy.tmpl
+    - src: confd.toml.j2
+      dest: /etc/confd/confd.toml
+    - src: haproxy.toml.j2
+      dest: /etc/confd/conf.d/haproxy.toml
+    - src: haproxy.tmpl.j2
+      dest: /etc/confd/templates/haproxy.tmpl
   tags: confd
 
 - name: Confd | Copy systemd service file

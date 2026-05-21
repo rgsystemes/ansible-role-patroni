@@ -1,0 +1,44 @@
+---
+- name: Converge
+  hosts: patroni
+  become: true
+  gather_facts: true
+
+  vars:
+    # Cluster identity
+    patroni_cluster_name: "test-cluster"
+
+    # Disable OS-level features incompatible with Docker
+    lab: true
+    sysctl_set: false
+    swap_file_create: false
+    disable_thp: false
+    set_limits: false
+    set_scheduler: false
+    enable_ssh_key_based_authentication: false
+
+    # Disable HAProxy load balancing (not needed for Patroni tests)
+    with_haproxy_load_balancing: false
+
+    # Simplify replication for testing
+    synchronous_mode: false
+    synchronous_mode_strict: false
+    synchronous_node_count: 1
+    patroni_watchdog_mode: "off"
+
+    # Credentials
+    patroni_superuser_password: "test-postgres"
+    patroni_replication_password: "test-replicator"
+
+    # Disable userlist generation (avoids race condition)
+    pgbouncer_generate_userlist: false
+
+  pre_tasks:
+    - name: Compute cluster VIP from Docker bridge subnet
+      ansible.builtin.set_fact:
+        cluster_vip: >-
+          {{ (ansible_facts['default_ipv4']['address']
+              .split('.')[:3] | join('.')) ~ '.100' }}
+
+  roles:
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"

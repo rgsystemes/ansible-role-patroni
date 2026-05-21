@@ -1,42 +1,48 @@
 ---
 - name: Patroni | Install Patroni
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    _pip_extra_args: >-
+      --trusted-host=pypi.python.org
+      --trusted-host=pypi.org
+      --trusted-host=files.pythonhosted.org
+      {{ '--break-system-packages' if ansible_facts['distribution_release'] == 'trixie' else '' }}
+  tags: patroni
   block:
     - name: Patroni | Copy patroni requirements.txt file
       ansible.builtin.template:
         src: requirements.txt.j2
         dest: /tmp/requirements.txt
+        mode: 0644
 
     - name: Patroni | Install setuptools
       ansible.builtin.pip:
         name: "{{ 'setuptools>=67.0.0' if ansible_facts['distribution_release'] == 'trixie' else 'setuptools<66.0.0' }}"
         state: present
         executable: pip3
-        extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
+        extra_args: "{{ _pip_extra_args }}"
         umask: "0022"
       environment:
-        PATH: "{{ ansible_env.PATH }}:/usr/local/bin:/usr/bin"
+        PATH: "{{ ansible_facts['env']['PATH'] }}:/usr/local/bin:/usr/bin"
 
     - name: Patroni | Install requirements
       ansible.builtin.pip:
         requirements: /tmp/requirements.txt
         executable: pip3
-        extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
+        extra_args: "{{ _pip_extra_args }}"
         umask: "0022"
       environment:
-        PATH: "{{ ansible_env.PATH }}:{{ postgresql_bin_dir }}:/usr/local/bin:/usr/bin"
+        PATH: "{{ ansible_facts['env']['PATH'] }}:{{ postgresql_bin_dir }}:/usr/local/bin:/usr/bin"
 
     - name: "Patroni | Install patroni {{ patroni_install_version }}"
       ansible.builtin.pip:
         name: "patroni=={{ patroni_install_version }}"
         executable: pip3
-        extra_args: "--trusted-host=pypi.python.org --trusted-host=pypi.org --trusted-host=files.pythonhosted.org"
+        extra_args: "{{ _pip_extra_args }}"
         umask: "0022"
       environment:
-        PATH: "{{ ansible_env.PATH }}:/usr/local/bin:/usr/bin"
+        PATH: "{{ ansible_facts['env']['PATH'] }}:/usr/local/bin:/usr/bin"
       when: patroni_install_version != "latest"
-  vars:
-    ansible_python_interpreter: /usr/bin/python3
-  tags: patroni
 
 - name: Patroni | Create conf directory
   ansible.builtin.file:

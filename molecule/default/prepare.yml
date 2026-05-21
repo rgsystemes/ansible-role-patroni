@@ -1,0 +1,31 @@
+---
+- name: Prepare
+  hosts: patroni
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+          - curl
+          - gnupg2
+          - apt-transport-https
+          - ca-certificates
+          - sudo
+        state: present
+
+    - name: Add /etc/hosts entries for cluster members
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "{{ hostvars[item]['ansible_facts']['default_ipv4']['address'] }} {{ item }}"
+        state: present
+        unsafe_writes: true
+      loop: "{{ groups['patroni'] }}"

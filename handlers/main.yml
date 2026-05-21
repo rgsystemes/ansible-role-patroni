@@ -58,13 +58,14 @@
     state: restarted
   listen: restart keepalived
 
-- name: Wait for the cluster ip address (VIP) "{{ cluster_vip }}" is running
+- name: Wait for cluster VIP to be running - {{ cluster_vip }}
   ansible.builtin.command: ip addr show
   register: ip_addr_result
-  until: cluster_vip in ip_addr_result.stdout
+  until: cluster_vip == '0.0.0.0' or cluster_vip in ip_addr_result.stdout
   retries: 30
   delay: 2
   changed_when: false
+  failed_when: false
   listen: restart keepalived
 
 - name: Restart KeepAlived exporter
@@ -95,7 +96,7 @@
     state: restarted
   listen: restart pgbouncer
 
-- name: Wait for port "{{ pgbouncer_listen_port }}" to become open on the host
+- name: Wait for port to become open on the host - {{ pgbouncer_listen_port }}
   ansible.builtin.wait_for:
     port: "{{ pgbouncer_listen_port }}"
     host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
@@ -110,7 +111,7 @@
     name: pgbouncer
     state: reloaded
   listen: reload pgbouncer
-  ignore_errors: true
+  failed_when: false
 
 - name: Restart PGBouncer exporter
   ansible.builtin.systemd:

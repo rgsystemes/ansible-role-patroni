@@ -1,7 +1,7 @@
 ---
 - name: Hostname | Upgrade hostname
   include_tasks: _hostname.yml
-  when: "not 'lab' in inventory_dir"
+  when: not lab
   tags: ['hostname', 'etcd']
 
 - name: Apt | Install packages
@@ -18,6 +18,8 @@
   tags: etcd
 
 - name: PostgreSQL cluster | Install PostgreSQL cluster
+  when: inventory_hostname in groups["patroni"]
+  tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
   block:
     - name: PostgreSQL | Install PosgreSQL
       include_tasks: _postgresql.yml
@@ -46,26 +48,28 @@
     - name: SSH | Manage SSH keys
       include_tasks: _ssh.yml
       tags: ssh
-  when: inventory_hostname in groups["patroni"]
-  tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
 
 - name: Balancers cluster | Install PostgreSQL cluster
+  when: inventory_hostname in groups["patroni"]
+  tags: ['haproxy', 'confd', 'keepalived', 'exporter']
   block:
     - name: HAProxy | Install HAProxy
       include_tasks: _haproxy.yml
+      when: with_haproxy_load_balancing | bool
       tags: haproxy
 
     - name: Confd | Install Confd
       include_tasks: _confd.yml
+      when: with_haproxy_load_balancing | bool
       tags: confd
 
     - name: KeepAlived | Install KeepAlived
       include_tasks: _keepalived.yml
       tags: keepalived
-  when: inventory_hostname in groups["patroni"]
-  tags: ['haproxy', 'confd', 'keepalived', 'exporter']
 
 - name: PostgreSQL cluster | Install Patroni/PGBouncer cluster
+  when: inventory_hostname in groups["patroni"]
+  tags: ['pgbouncer', 'postgresql', 'patroni', 'exporter']
   block:
     - name: PGBouncer | Install PGBouncer
       include_tasks: _pgbouncer.yml
@@ -86,9 +90,6 @@
     - name: PGBouncer | Configure PGBouncer
       include_tasks: _pgbouncer.config.yml
       tags: ['pgbouncer', 'exporter']
-
-  when: inventory_hostname in groups["patroni"]
-  tags: ['pgbouncer', 'postgresql', 'patroni', 'exporter']
 
 - name: Info | Get informations of cluster
   include_tasks: _info.yml

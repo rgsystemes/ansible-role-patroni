@@ -5,7 +5,7 @@
       ansible.builtin.systemd:
         daemon_reload: true
         name: patroni
-        state: restarted
+        state: started
         enabled: true
 
     - name: "Patroni | Wait for port {{ patroni_restapi_port }} to become open on the host"
@@ -70,7 +70,7 @@
       ansible.builtin.systemd:
         daemon_reload: true
         name: patroni
-        state: restarted
+        state: started
         enabled: true
 
     - name: Patroni | "Wait for port {{ patroni_restapi_port }} to become open on the host"
@@ -88,7 +88,7 @@
         status_code: 200
       register: replica_result
       until: replica_result.status == 200
-      retries: 1200 
+      retries: 1200
       delay: 30
   when: is_master is not defined or not is_master|bool
   tags: patroni

@@ -8,11 +8,18 @@
   retries: 3
   tags: pgbouncer
 
+- name: PGBouncer | Check if custom service file already exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/pgbouncer.service
+  register: _pgbouncer_custom_service
+  tags: pgbouncer
+
 - name: PGBouncer | Stop and disable standard init script
   ansible.builtin.systemd:
     name: pgbouncer
     state: stopped
     enabled: false
+  when: not _pgbouncer_custom_service.stat.exists
   tags: pgbouncer
 
 - name: PGBouncer | Copy systemd service file
@@ -32,13 +39,22 @@
 
 - name: PGBouncer | Calculate pool_size
   ansible.builtin.set_fact:
-    defined_pool_size: "{{ defined_pool_size|default(0)|int + item.pool_parameters|regex_search('pool_size=(\\d+)')|regex_replace('[^0-9]', )|default(pgbouncer_default_pool_size, true)|int }}"
+    defined_pool_size: >-
+      {{ defined_pool_size | default(0) | int
+         + item.pool_parameters
+         | regex_search('pool_size=(\\d+)')
+         | regex_replace('[^0-9]', '')
+         | default(pgbouncer_default_pool_size, true) | int }}
   loop: "{{ pgbouncer_pools }}"
   tags: pgbouncer
 
 - name: PGBouncer | Calculate total_pool_size
   ansible.builtin.set_fact:
-    total_pool_size: "{{ defined_pool_size|default(0)|int + (postgresql_databases|length|int - pgbouncer_pools|length|int) * pgbouncer_default_pool_size|int }}"
+    total_pool_size: >-
+      {{ defined_pool_size | default(0) | int
+         + (postgresql_databases | length | int
+            - pgbouncer_pools | length | int)
+         * (pgbouncer_default_pool_size | int) }}
   tags: pgbouncer
 
 - name: PGBouncer | Set default value to max_connections

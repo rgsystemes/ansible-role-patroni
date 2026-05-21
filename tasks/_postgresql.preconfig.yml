@@ -35,6 +35,15 @@
   when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
   tags: patroni
 
+- name: PostgreSQL | Gather service facts
+  ansible.builtin.service_facts:
+  tags: patroni
+
+- name: PostgreSQL | Detect if Patroni is already managing PostgreSQL
+  ansible.builtin.set_fact:
+    patroni_is_running: "{{ ansible_facts.services.get('patroni.service', {}).get('state', '') == 'running' }}"
+  tags: patroni
+
 - name: PostgreSQL | When PostgreSQL does not exist
   block:
     - name: PostgreSQL | check that data directory "{{ postgresql_data_dir }}" is not initialized
@@ -43,16 +52,17 @@
       register: pgdata_initialized
       when: patroni_cluster_bootstrap_method == "initdb"
 
-    - name: PostgreSQL | data directory check result
-      ansible.builtin.fail:
-        msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized"
-      when: pgdata_initialized.stat.exists is defined and
-            pgdata_initialized.stat.exists
-
     - name: PostgreSQL | make sure the postgresql config files exists
       ansible.builtin.stat:
         path: "{{ postgresql_conf_dir }}/postgresql.conf"
       register: postgresql_conf_file
+
+    - name: PostgreSQL | data directory check result
+      ansible.builtin.fail:
+        msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized"
+      when: pgdata_initialized.stat.exists is defined and
+            pgdata_initialized.stat.exists and
+            not postgresql_conf_file.stat.exists
 
     - name: PostgreSQL | generate default postgresql config files
       become: true
@@ -90,7 +100,9 @@
         - directory
       when: (postgresql_wal_dir is defined and postgresql_wal_dir | length > 0) and
             (is_master is defined and is_master|bool)
-  when: postgresql_exists != "true" or patroni_cluster_bootstrap_method != "initdb"
+  when:
+    - postgresql_exists != "true" or patroni_cluster_bootstrap_method != "initdb"
+    - not patroni_is_running | bool
   tags: patroni
 
 - name: PostgreSQL | When PostgreSQL does exist
@@ -163,8 +175,12 @@
             port: "{{ postgresql_port }}"
             state: present
           with_items:
-            - { name: "{{ patroni_superuser_username }}", password: "{{ patroni_superuser_password }}", role_attr_flags: "SUPERUSER" }
-            - { name: "{{ patroni_replication_username }}", password: "{{ patroni_replication_password }}", role_attr_flags: "LOGIN,REPLICATION" }
+            - name: "{{ patroni_superuser_username }}"
+              password: "{{ patroni_superuser_password }}"
+              role_attr_flags: "SUPERUSER"
+            - name: "{{ patroni_replication_username }}"
+              password: "{{ patroni_replication_password }}"
+              role_attr_flags: "LOGIN,REPLICATION"
       when: is_master is defined and is_master|bool
 
     - name: PostgreSQL | check PostgreSQL is started
@@ -190,7 +206,9 @@
     - name: PostgreSQL | Stop PostgreSQL (will be managed by patroni)
       become: true
       become_user: postgres
-      ansible.builtin.command: "/usr/bin/pg_ctlcluster {{ postgresql_version }} {{ postgresql_cluster_name }} stop -m fast -- -w -t 600"
+      ansible.builtin.command: >-
+        /usr/bin/pg_ctlcluster {{ postgresql_version }}
+        {{ postgresql_cluster_name }} stop -m fast -- -w -t 600
       when: checkpoint_result.rc is defined and checkpoint_result.rc == 0
 
     - name: PostgreSQL | check PostgreSQL is stopped

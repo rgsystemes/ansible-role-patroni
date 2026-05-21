@@ -1,13 +1,22 @@
 ---
 - name: PGBouncer | Calculate pool_size
   ansible.builtin.set_fact:
-    defined_pool_size: "{{ defined_pool_size|default(0)|int + item.pool_parameters|regex_search('pool_size=(\\d+)')|regex_replace('[^0-9]', )|default(pgbouncer_default_pool_size, true)|int }}"
+    defined_pool_size: >-
+      {{ defined_pool_size | default(0) | int
+         + item.pool_parameters
+         | regex_search('pool_size=(\\d+)')
+         | regex_replace('[^0-9]', '')
+         | default(pgbouncer_default_pool_size, true) | int }}
   loop: "{{ pgbouncer_pools }}"
   tags: pgbouncer
 
 - name: PGBouncer | Calculate total_pool_size
   ansible.builtin.set_fact:
-    total_pool_size: "{{ defined_pool_size|default(0)|int + (postgresql_databases|length|int - pgbouncer_pools|length|int) * pgbouncer_default_pool_size|int }}"
+    total_pool_size: >-
+      {{ defined_pool_size | default(0) | int
+         + (postgresql_databases | length | int
+            - pgbouncer_pools | length | int)
+         * (pgbouncer_default_pool_size | int) }}
   tags: pgbouncer
 
 - name: PGBouncer | Set default value to max_connections
@@ -68,7 +77,10 @@
   block:
     - name: PGBouncer | Download PGBouncer Exporter
       ansible.builtin.get_url:
-        url: https://github.com/prometheus-community/pgbouncer_exporter/releases/download/v0.6.0/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
+        url: >-
+          {{ 'https://github.com/prometheus-community/pgbouncer_exporter'
+             + '/releases/download/v0.6.0/'
+             + 'pgbouncer_exporter-0.6.0.linux-amd64.tar.gz' }}
         dest: /opt/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
         mode: '0640'
         owner: root
@@ -78,7 +90,7 @@
       ansible.builtin.unarchive:
         src: /opt/pgbouncer_exporter-0.6.0.linux-amd64.tar.gz
         dest: /opt/
-        remote_src: yes
+        remote_src: true
 
     - name: PGBouncer | Move PGBouncer Exporter in bin directory
       ansible.builtin.copy:
@@ -87,7 +99,7 @@
         owner: root
         group: root
         mode: 0755
-        remote_src: yes
+        remote_src: true
 
     - name: PGBouncer | Install PGBouncer Exporter service
       ansible.builtin.template:

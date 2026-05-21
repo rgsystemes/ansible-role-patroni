@@ -2,7 +2,7 @@
 ---
 
 scope: {{ patroni_cluster_name }}
-name: {{ ansible_hostname }}
+name: {{ ansible_facts['hostname'] }}
 namespace: /service/
 
 {% if patroni_log_destination == 'logfile' %}
@@ -23,11 +23,6 @@ log:
 restapi:
   listen: {{ ansible_facts['default_ipv4']['address'] }}:{{ patroni_restapi_port }}
   connect_address: {{ ansible_facts['default_ipv4']['address'] }}:{{ patroni_restapi_port }}
-#  certfile: /etc/ssl/certs/ssl-cert-snakeoil.pem
-#  keyfile: /etc/ssl/private/ssl-cert-snakeoil.key
-#  authentication:
-#    username: username
-#    password: password
 
 etcd3:
 {% if not dcs_exists|bool %}
@@ -173,7 +168,3 @@ tags:
   noloadbalance: false
   clonefrom: false
   nosync: false
-
-  # specify a node to replicate from (cascading replication)
-#  replicatefrom: (node name)
-

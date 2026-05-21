@@ -41,7 +41,7 @@
       ansible.builtin.file:
         dest: /etc/logrotate.d/postgresql-common
         state: absent
-  
+
     - name: PostgreSQL | Enable log rotation with logrotate
       ansible.builtin.copy:
         src: postgresql.logrotate

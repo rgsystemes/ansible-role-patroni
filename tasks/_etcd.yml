@@ -30,12 +30,14 @@
       dest: /etc/etcd/etcd.conf
     - src: etcd.service.j2
       dest: /etc/systemd/system/etcd.service
+  register: etcd_config_result
   tags: etcd
 
 - name: Etcd | Stop etcd service
   ansible.builtin.systemd:
     name: etcd
     state: stopped
+  when: etcd_config_result is changed
   tags: etcd
 
 - name: Etcd | Enable and start etcd service
@@ -76,4 +78,5 @@
       ansible.builtin.shell: |
         etcdctl member list
       delegate_to: "{{ groups.patroni[0] }}"
+      changed_when: false
   tags: etcd

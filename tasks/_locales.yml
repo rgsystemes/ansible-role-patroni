@@ -16,9 +16,9 @@
     group: root
     mode: '0644'
   loop:
-    - { regexp: '^LANG=', line: 'LANG={{ locale }}' }
-    - { regexp: '^LANGUAGE=', line: 'LANGUAGE={{ locale }}' }
-    - { regexp: '^LC_ALL=', line: 'LC_ALL={{ locale }}' }
+    - {regexp: '^LANG=', line: 'LANG={{ locale }}'}
+    - {regexp: '^LANGUAGE=', line: 'LANGUAGE={{ locale }}'}
+    - {regexp: '^LC_ALL=', line: 'LC_ALL={{ locale }}'}
   loop_control:
     label: "{{ item.line }}"
   when: locale is defined and locale | length > 0

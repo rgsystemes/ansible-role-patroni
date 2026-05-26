@@ -46,26 +46,14 @@ listen master
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 4 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['hostname'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
+  {% for host in groups['patroni'] %}
+server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
+{% endfor %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['hostname'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
+  {% for host in groups['patroni'] %}
+server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
+  {% endfor %}
 {% endif %}
 
 listen replicas
@@ -86,26 +74,14 @@ listen replicas
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
+  {% endfor %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
+  {% endfor %}
 {% endif %}
 
 listen replicas_sync
@@ -126,26 +102,14 @@ listen replicas_sync
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
+  {% endfor %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
+  {% endfor %}
 {% endif %}
 
 listen replicas_async
@@ -166,24 +130,13 @@ listen replicas_async
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install|bool %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
+  {% endfor %}
   {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install|bool ) %}
-  {% if 'patroni' in group_names %}
-    {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] %}
 server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% else %}
-    {% for host in groups['postgresql'] %}
-server {{ hostvars[host]['ansible_facts']['hostname'] }} {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
-    {% endfor %}
-  {% endif %}
+  {% endfor %}
 {% endif %}

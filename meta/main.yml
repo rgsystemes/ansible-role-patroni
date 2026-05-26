@@ -5,7 +5,7 @@ galaxy_info:
   author: Floriane CHOVIN (floriane.chovin@septeo.com)
   description: PostgreSQL High-Availability Cluster based on Patroni
   company: Septeo IT Solutions
-  license: "license (BSD, MIT)"
+  license: "MIT OR BSD-3-Clause"
   min_ansible_version: '2.10'
   platforms:
     - name: Debian

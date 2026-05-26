@@ -1,5 +1,7 @@
 ---
 - name: Info | Display cluster PostgreSQL health
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | Check postgresql cluster health
       run_once: true
@@ -15,10 +17,11 @@
       run_once: true
       ansible.builtin.debug:
         var: patronictl_result.stdout_lines
-  ignore_errors: true
-  tags: info
 
 - name: Info | Display cluster PostgreSQL databases
+  when: is_master is defined and is_master | bool
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | Get postgresql database list
       run_once: true
@@ -47,17 +50,17 @@
           ORDER BY 1
         \""
       register: dbs_result
-      when: is_master is defined and is_master|bool
       changed_when: false
 
     - name: Info | PostgreSQL list of databases
       run_once: true
       ansible.builtin.debug:
         var: dbs_result.stdout_lines
-  ignore_errors: true
-  tags: info
 
 - name: Info | Display cluster PostgreSQL connections informations
+  when: cluster_vip is defined and cluster_vip | length > 0
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | PostgreSQL Cluster connection info
       run_once: true
@@ -97,11 +100,11 @@
           - +------------------------------------------------+
       when:
         - not with_haproxy_load_balancing | bool
-  when: cluster_vip is defined and cluster_vip | length > 0
-  ignore_errors: true
-  tags: info
 
 - name: Info | Display cluster VIP informations
+  when: cluster_vip is defined and cluster_vip | length > 0
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | Get vip info
       ansible.builtin.set_fact:
@@ -115,22 +118,22 @@
           "Cluster ip address (VIP) {{ cluster_vip }}
            is running on server {{ ansible_facts['hostname'] }}"
       when: man_ip is defined and man_ip == cluster_vip
-  when: (cluster_vip is defined and cluster_vip | length > 0)
-  ignore_errors: true
-  tags: info
 
 
 - name: Info | Display nodes informations
+  when: cluster_vip is not defined or cluster_vip | length < 1
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | Create list of nodes
       run_once: true
       ansible.builtin.set_fact:
         haproxy_nodes: >-
-          {{ (groups['patroni'] if 'patroni' in group_names else groups['balancers'])
+          {{ groups['patroni']
              | map('extract', hostvars, ['ansible_facts', 'default_ipv4', 'address'])
              | join(',') }}
         postgres_cluster_nodes: >-
-          {{ (groups['patroni'] if 'patroni' in group_names else groups['postgresql'])
+          {{ groups['patroni']
              | map('extract', hostvars, ['ansible_facts', 'default_ipv4', 'address'])
              | join(',') }}
 
@@ -172,6 +175,3 @@
           - +------------------------------------------------+
       when:
         - not with_haproxy_load_balancing | bool
-  ignore_errors: true
-  when: cluster_vip is not defined or cluster_vip | length < 1
-  tags: info

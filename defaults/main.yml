@@ -1,6 +1,7 @@
 ---
 # Hardware variables
 openstack: false
+lab: false
 
 # Sysctl variables
 sysctl_set: true
@@ -214,9 +215,7 @@ locale: "en_US.UTF-8"
 # Authentication variables
 enable_ssh_key_based_authentication: true
 ssh_key_user: "postgres"
-ssh_known_hosts: >-
-  {{ groups['patroni'] if 'patroni' in group_names
-     else groups['postgresql'] }}
+ssh_known_hosts: "{{ groups['patroni'] }}"
 
 # HAProxy variables
 haproxy_version: "{{ _haproxy_versions[ansible_facts['distribution_release']] | default('') }}"

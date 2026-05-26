@@ -14,11 +14,10 @@
 
 - name: Etcd cluster | Install etcd
   include_tasks: _etcd.yml
-  when: not dcs_exists | bool and inventory_hostname in groups["patroni"]
+  when: not dcs_exists | bool
   tags: etcd
 
 - name: PostgreSQL cluster | Install PostgreSQL cluster
-  when: inventory_hostname in groups["patroni"]
   tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
   block:
     - name: PostgreSQL | Install PosgreSQL
@@ -50,7 +49,6 @@
       tags: ssh
 
 - name: Balancers cluster | Install PostgreSQL cluster
-  when: inventory_hostname in groups["patroni"]
   tags: ['haproxy', 'confd', 'keepalived', 'exporter']
   block:
     - name: HAProxy | Install HAProxy
@@ -68,7 +66,6 @@
       tags: keepalived
 
 - name: PostgreSQL cluster | Install Patroni/PGBouncer cluster
-  when: inventory_hostname in groups["patroni"]
   tags: ['pgbouncer', 'postgresql', 'patroni', 'exporter']
   block:
     - name: PGBouncer | Install PGBouncer

@@ -38,6 +38,8 @@
   tags: pgbouncer
 
 - name: PGBouncer | Generate /etc/pgbouncer/userlist.txt
+  when: pgbouncer_generate_userlist | bool
+  tags: pgbouncer
   block:
     - name: PGBouncer | Get users and password md5 from pg_shadow
       become: true
@@ -48,7 +50,6 @@
       loop: "{{ pgbouncer_userlist }}"
       register: pg_shadow_result
       changed_when: false
-      tags: pgbouncer
 
     - name: PGBouncer | Clear /etc/pgbouncer/userlist.txt
       become: true
@@ -68,12 +69,13 @@
         - item.stdout is defined
         - item.stdout | length > 0
       with_items: "{{ pg_shadow_result.results }}"
-      tags: pgbouncer
-  when: pgbouncer_generate_userlist|bool and is_master is defined
 
-- meta: flush_handlers
+- ansible.builtin.meta: flush_handlers
+  tags: pgbouncer
 
 - name: PGBouncer | Install PGBouncer Exporter
+  notify: restart pgbouncer-exporter
+  tags: ['pgbouncer', 'exporter']
   block:
     - name: PGBouncer | Download PGBouncer Exporter
       ansible.builtin.get_url:
@@ -108,7 +110,6 @@
         owner: root
         group: root
         mode: 0644
-  notify: restart pgbouncer-exporter
-  tags: ['pgbouncer', 'exporter']
 
-- meta: flush_handlers
+- ansible.builtin.meta: flush_handlers
+  tags: ['pgbouncer', 'exporter']

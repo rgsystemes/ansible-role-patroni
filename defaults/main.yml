@@ -51,7 +51,7 @@ etcd_packages: "{{ _etcd_packages[ansible_facts['distribution_release']] | defau
 etcd_cluster_name: "etcd-{{ patroni_cluster_name }}"
 etcd_data_dir: "/var/lib/etcd"
 etcd_conf_dir: "/etc/etcd"
-etcd_cluster_state: "new"
+etcd_cluster_state: "{{ 'existing' if patroni_new_node | bool else 'new' }}"
 
 # PostgreSQL variables
 postgresql_version: "12"
@@ -269,6 +269,7 @@ pgbouncer_max_db_connections: 1000
 pgbouncer_query_wait_timeout: 120
 
 # Patroni variables
+patroni_new_node: false # Set to 'true' when adding a new node to an existing cluster
 patroni_cluster_name: "postgres-cluster"
 patroni_cluster_bootstrap_method: "initdb"
 patroni_install_version: "3.0.2"

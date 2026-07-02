@@ -61,11 +61,12 @@
 - name: Wait for cluster VIP to be running - {{ cluster_vip }}
   ansible.builtin.command: ip addr show
   register: ip_addr_result
-  until: cluster_vip == '0.0.0.0' or cluster_vip in ip_addr_result.stdout
+  until: cluster_vip in ip_addr_result.stdout
   retries: 30
   delay: 2
   changed_when: false
   failed_when: false
+  when: cluster_vip != '0.0.0.0' and (is_master is defined and is_master | bool)
   listen: restart keepalived
 
 - name: Restart KeepAlived exporter

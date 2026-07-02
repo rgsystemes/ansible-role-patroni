@@ -36,7 +36,7 @@
       retries: 10
       delay: 2
       when: patroni_standby_cluster.host is not defined or patroni_standby_cluster.host | length < 1
-  when: is_master is defined and is_master|bool
+  when: is_master is defined and is_master | bool
   tags: patroni
 
 - name: PostgreSQL | Generate pg_hba.conf when PostgreSQL does not exist
@@ -64,7 +64,34 @@
   when: existing_pgcluster is not defined or not existing_pgcluster | bool
   tags: patroni
 
+- name: PostgreSQL | Propagate pg_hba.conf to existing nodes when adding a new node
+  when: patroni_new_node | bool
+  tags: patroni
+  block:
+    - name: PostgreSQL | Update pg_hba.conf on existing cluster nodes
+      ansible.builtin.template:
+        src: pg_hba.conf.j2
+        dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+        owner: postgres
+        group: postgres
+        mode: 0640
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: pg_hba_propagate
+
+    - name: PostgreSQL | Reload pg_hba.conf on nodes where the file changed
+      become: true
+      become_user: postgres
+      ansible.builtin.command: >
+        {{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -c 'SELECT pg_reload_conf()'
+      delegate_to: "{{ item.item }}"
+      loop: "{{ pg_hba_propagate.results }}"
+      when: item.changed
+      changed_when: true
+
 - name: Patroni | Start Patroni on replicas
+  when: is_master is not defined or not is_master | bool
+  tags: patroni
   block:
     - name: Patroni | Start patroni service on Replica servers
       ansible.builtin.systemd:
@@ -90,15 +117,14 @@
       until: replica_result.status == 200
       retries: 1200
       delay: 30
-  when: is_master is not defined or not is_master|bool
-  tags: patroni
 
 - name: WAL | Configure a custom WAL
-  import_tasks: _custom_wal_dir.yml
+  ansible.builtin.import_tasks: _custom_wal_dir.yml
   when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
   tags: patroni
 
 - name: PostgreSQL | Disable postgresql from autostart
+  tags: patroni
   block:
     - name: PostgreSQL | Turning off postgresql autostart from config "start.conf" (will be managed by patroni)
       ansible.builtin.copy:
@@ -113,7 +139,6 @@
         name: "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}"
         enabled: false
         daemon_reload: true
-  tags: patroni
 
 - name: Patroni | Add PATRONICTL_CONFIG_FILE environment variable into /etc/environment
   ansible.builtin.lineinfile:
@@ -141,5 +166,5 @@
     state: present
   with_items: "{{ postgresql_secondary_users }}"
   when: (postgresql_secondary_users is defined and postgresql_secondary_users | length > 0)
-        and (is_master is defined and is_master|bool)
+        and (is_master is defined and is_master | bool)
   tags: postgresql

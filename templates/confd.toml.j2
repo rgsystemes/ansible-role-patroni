@@ -3,7 +3,7 @@ interval = 10
 watch = true
 nodes = [
 {% for host in groups['patroni'] %}
-  "http://{{ hostvars[host].ansible_facts['default_ipv4']['address'] }}:2379",
+  "http://{{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:2379",
 {% endfor %}
 {% for etcd_hosts in patroni_etcd_hosts %}
   "http://{{etcd_hosts.host}}:{{etcd_hosts.port}}",

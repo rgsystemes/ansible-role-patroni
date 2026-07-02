@@ -45,6 +45,10 @@
   tags: patroni
 
 - name: PostgreSQL | When PostgreSQL does not exist
+  when:
+    - postgresql_exists != "true" or patroni_cluster_bootstrap_method != "initdb"
+    - not patroni_is_running | bool
+  tags: patroni
   block:
     - name: PostgreSQL | check that data directory "{{ postgresql_data_dir }}" is not initialized
       ansible.builtin.stat:
@@ -59,10 +63,9 @@
 
     - name: PostgreSQL | data directory check result
       ansible.builtin.fail:
-        msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized"
+        msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized. Set postgresql_exists: 'true' to manage an existing cluster."
       when: pgdata_initialized.stat.exists is defined and
-            pgdata_initialized.stat.exists and
-            not postgresql_conf_file.stat.exists
+            pgdata_initialized.stat.exists
 
     - name: PostgreSQL | generate default postgresql config files
       become: true
@@ -99,13 +102,11 @@
         - absent
         - directory
       when: (postgresql_wal_dir is defined and postgresql_wal_dir | length > 0) and
-            (is_master is defined and is_master|bool)
-  when:
-    - postgresql_exists != "true" or patroni_cluster_bootstrap_method != "initdb"
-    - not patroni_is_running | bool
-  tags: patroni
+            (is_master is defined and is_master | bool)
 
 - name: PostgreSQL | When PostgreSQL does exist
+  when: postgresql_exists == "true" and patroni_cluster_bootstrap_method == "initdb"
+  tags: patroni
   block:
     - name: PostgreSQL | check that data directory "{{ postgresql_data_dir }}" is initialized
       ansible.builtin.stat:
@@ -118,6 +119,7 @@
       when: not pgdata_initialized.stat.exists
 
     - name: PostgreSQL | Check PostgreSQL on master
+      when: is_master is defined and is_master | bool
       block:
         - name: PostgreSQL | check PostgreSQL is started on Master
           become: true
@@ -181,7 +183,6 @@
             - name: "{{ patroni_replication_username }}"
               password: "{{ patroni_replication_password }}"
               role_attr_flags: "LOGIN,REPLICATION"
-      when: is_master is defined and is_master|bool
 
     - name: PostgreSQL | check PostgreSQL is started
       become: true
@@ -218,5 +219,3 @@
       register: pg_ctl_stop_result
       failed_when: pg_ctl_stop_result.rc != 3
       changed_when: false
-  when: postgresql_exists == "true" and patroni_cluster_bootstrap_method == "initdb"
-  tags: patroni

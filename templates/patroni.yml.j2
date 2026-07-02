@@ -26,7 +26,7 @@ restapi:
 
 etcd3:
 {% if not dcs_exists|bool %}
-  hosts: {% for host in groups['patroni'] %}{{ hostvars[host].ansible_facts['default_ipv4']['address'] }}:2379{% if not loop.last %},{% endif %}{% endfor %}
+  hosts: {% for host in groups['patroni'] %}{{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:2379{% if not loop.last %},{% endif %}{% endfor %}
 {% else %}
   hosts: {% for etcd_hosts in patroni_etcd_hosts %}{{etcd_hosts.host}}:{{etcd_hosts.port}}{% if not loop.last %},{% endif %}{% endfor %}
 {% endif %}

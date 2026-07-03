@@ -22,3 +22,6 @@ galaxy_info:
     - keepalived
 
 dependencies: []
+collections:
+  - community.general
+  - ansible.posix

@@ -38,7 +38,9 @@
   notify: restart keepalived
   tags: keepalived
 
-- meta: flush_handlers
+- name: KeepAlived | Flush handlers to restart keepalived service
+  ansible.builtin.meta: flush_handlers
+  tags: keepalived
 
 - name: SELinux | change the keepalived_t domain to permissive
   ansible.builtin.selinux_permissive:
@@ -50,6 +52,8 @@
   tags: keepalived
 
 - name: KeepAlived | Install KeepAlived Exporter
+  notify: restart keepalived-exporter
+  tags: ['keepalived', 'exporter']
   block:
     - name: KeepAlived | Download KeepAlived Exporter
       ansible.builtin.get_url:
@@ -73,7 +77,7 @@
         owner: root
         group: root
         mode: 0644
-  notify: restart keepalived-exporter
-  tags: ['keepalived', 'exporter']
 
-- meta: flush_handlers
+- name: KeepAlived | Flush handlers to restart keepalived-exporter service
+  ansible.builtin.meta: flush_handlers
+  tags: ['keepalived', 'exporter']

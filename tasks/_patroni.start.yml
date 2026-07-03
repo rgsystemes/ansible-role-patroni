@@ -1,5 +1,7 @@
 ---
 - name: Patroni | Start Patroni on master
+  when: is_master is defined and is_master | bool
+  tags: patroni
   block:
     - name: Patroni | Start patroni service on the Master server
       ansible.builtin.systemd:
@@ -36,10 +38,10 @@
       retries: 10
       delay: 2
       when: patroni_standby_cluster.host is not defined or patroni_standby_cluster.host | length < 1
-  when: is_master is defined and is_master | bool
-  tags: patroni
 
 - name: PostgreSQL | Generate pg_hba.conf when PostgreSQL does not exist
+  when: existing_pgcluster is not defined or not existing_pgcluster | bool
+  tags: patroni
   block:
     - name: PostgreSQL | Generate pg_hba.conf
       ansible.builtin.template:
@@ -61,8 +63,6 @@
       changed_when: psql_reload_result.rc == 0
       failed_when: false
       when: generate_pg_hba is changed
-  when: existing_pgcluster is not defined or not existing_pgcluster | bool
-  tags: patroni
 
 - name: PostgreSQL | Propagate pg_hba.conf to existing nodes when adding a new node
   when: patroni_new_node | bool

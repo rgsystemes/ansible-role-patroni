@@ -32,9 +32,14 @@
   notify: restart haproxy
   tags: haproxy
 
-- meta: flush_handlers
+- name: HAProxy | Flush handlers to restart haproxy service
+  ansible.builtin.meta: flush_handlers
+  tags: haproxy
 
 - name: SELinux | Manage SELinux for HAProxy
+  when: ansible_selinux.status is defined and ansible_selinux.status == 'enabled'
+  ignore_errors: true
+  tags: haproxy
   block:
     - name: SELinux | set haproxy_connect_any flag to enable tcp connections
       ansible.posix.seboolean:
@@ -46,9 +51,6 @@
       community.general.selinux_permissive:
         name: haproxy_t
         permissive: true
-  when: ansible_selinux.status is defined and ansible_selinux.status == 'enabled'
-  ignore_errors: true
-  tags: haproxy
 
 - name: HAProxy | Update log rotation with logrotate
   ansible.builtin.copy:

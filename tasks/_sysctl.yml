@@ -1,5 +1,7 @@
 ---
 - name: Sysctl | Modify kernel parameters
+  when: sysctl_set | bool
+  tags: sysctl
   block:
     - name: Sysctl | Build a sysctl_conf dynamic variable
       ansible.builtin.set_fact:
@@ -17,5 +19,3 @@
         reload: true
       loop: "{{ sysctl_conf_dynamic_var | default([]) }}"
       when: sysctl_conf_dynamic_var | default([]) | length > 0
-  when: sysctl_set | bool
-  tags: sysctl

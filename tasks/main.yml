@@ -1,19 +1,19 @@
 ---
 - name: Hostname | Upgrade hostname
-  include_tasks: _hostname.yml
+  ansible.builtin.include_tasks: _hostname.yml
   when: not lab
   tags: ['hostname', 'etcd']
 
 - name: Apt | Install packages
-  include_tasks: _apt.yml
+  ansible.builtin.include_tasks: _apt.yml
   tags: ['apt', 'etcd']
 
 - name: Sysctl | Manage Sysctl
-  include_tasks: _sysctl.yml
+  ansible.builtin.include_tasks: _sysctl.yml
   tags: ['sysctl', 'etcd']
 
 - name: Etcd cluster | Install etcd
-  include_tasks: _etcd.yml
+  ansible.builtin.include_tasks: _etcd.yml
   when: not dcs_exists | bool
   tags: etcd
 
@@ -21,73 +21,73 @@
   tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
   block:
     - name: PostgreSQL | Install PosgreSQL
-      include_tasks: _postgresql.yml
+      ansible.builtin.include_tasks: _postgresql.yml
       tags: postgresql
 
     - name: Swap | Manage swap
-      include_tasks: _swap.yml
+      ansible.builtin.include_tasks: _swap.yml
       tags: swap
 
     - name: THP | Disable Transparent Huge Pages
-      include_tasks: _thp.yml
+      ansible.builtin.include_tasks: _thp.yml
       tags: thp
 
     - name: PAM | Manage PAM limits
-      include_tasks: _pam.yml
+      ansible.builtin.include_tasks: _pam.yml
       tags: pam
 
     - name: IO Scheduler | Manage IO Scheduler
-      include_tasks: _ioscheduler.yml
+      ansible.builtin.include_tasks: _ioscheduler.yml
       tags: ioscheduler
 
     - name: Locales | Manage locales
-      include_tasks: _locales.yml
+      ansible.builtin.include_tasks: _locales.yml
       tags: locales
 
     - name: SSH | Manage SSH keys
-      include_tasks: _ssh.yml
+      ansible.builtin.include_tasks: _ssh.yml
       tags: ssh
 
 - name: Balancers cluster | Install PostgreSQL cluster
   tags: ['haproxy', 'confd', 'keepalived', 'exporter']
   block:
     - name: HAProxy | Install HAProxy
-      include_tasks: _haproxy.yml
+      ansible.builtin.include_tasks: _haproxy.yml
       when: with_haproxy_load_balancing | bool
       tags: haproxy
 
     - name: Confd | Install Confd
-      include_tasks: _confd.yml
+      ansible.builtin.include_tasks: _confd.yml
       when: with_haproxy_load_balancing | bool
       tags: confd
 
     - name: KeepAlived | Install KeepAlived
-      include_tasks: _keepalived.yml
+      ansible.builtin.include_tasks: _keepalived.yml
       tags: keepalived
 
 - name: PostgreSQL cluster | Install Patroni/PGBouncer cluster
   tags: ['pgbouncer', 'postgresql', 'patroni', 'exporter']
   block:
     - name: PGBouncer | Install PGBouncer
-      include_tasks: _pgbouncer.yml
+      ansible.builtin.include_tasks: _pgbouncer.yml
       tags: pgbouncer
 
     - name: PostgreSQL | Preconfigure PostgreSQL
-      include_tasks: _postgresql.preconfig.yml
+      ansible.builtin.include_tasks: _postgresql.preconfig.yml
       tags: postgresql
 
     - name: Patroni | Install Patroni
-      include_tasks: _patroni.yml
+      ansible.builtin.include_tasks: _patroni.yml
       tags: patroni
 
     - name: Patroni | Start Patroni
-      include_tasks: _patroni.start.yml
+      ansible.builtin.include_tasks: _patroni.start.yml
       tags: patroni
 
     - name: PGBouncer | Configure PGBouncer
-      include_tasks: _pgbouncer.config.yml
+      ansible.builtin.include_tasks: _pgbouncer.config.yml
       tags: ['pgbouncer', 'exporter']
 
 - name: Info | Get informations of cluster
-  include_tasks: _info.yml
+  ansible.builtin.include_tasks: _info.yml
   tags: info

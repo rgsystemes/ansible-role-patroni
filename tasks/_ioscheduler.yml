@@ -10,4 +10,6 @@
   when: set_scheduler is defined and set_scheduler | bool
   tags: ioscheduler
 
-- meta: flush_handlers
+- name: IO Scheduler | Flush handlers to restart io-scheduler service
+  ansible.builtin.meta: flush_handlers
+  tags: ioscheduler

@@ -26,7 +26,7 @@
 
 - name: PGBouncer | Set max_connections from vars if it defined
   ansible.builtin.set_fact:
-    max_connections: "{{ item.value|default(100, true) }}"
+    max_connections: "{{ item.value | default(100, true) }}"
   when: item.option == "max_connections"
   loop: "{{ postgresql_parameters }}"
   tags: pgbouncer
@@ -57,6 +57,9 @@
       ansible.builtin.copy:
         content: ''
         dest: /etc/pgbouncer/userlist.txt
+        owner: postgres
+        group: postgres
+        mode: 0650
 
     - name: PGBouncer | Generate /etc/pgbouncer/userlist.txt
       become: true
@@ -70,7 +73,8 @@
         - item.stdout | length > 0
       with_items: "{{ pg_shadow_result.results }}"
 
-- ansible.builtin.meta: flush_handlers
+- name: PGBouncer | Flush handlers to reload pgbouncer
+  ansible.builtin.meta: flush_handlers
   tags: pgbouncer
 
 - name: PGBouncer | Install PGBouncer Exporter
@@ -111,5 +115,6 @@
         group: root
         mode: 0644
 
-- ansible.builtin.meta: flush_handlers
+- name: PGBouncer | Flush handlers to restart pgbouncer-exporter service
+  ansible.builtin.meta: flush_handlers
   tags: ['pgbouncer', 'exporter']

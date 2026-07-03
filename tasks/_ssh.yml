@@ -1,5 +1,9 @@
 ---
 - name: SSH | Generate SSH authentication between PostgreSQL servers
+  ignore_errors: true
+  when: enable_ssh_key_based_authentication is defined and
+        enable_ssh_key_based_authentication | bool
+  tags: ssh
   block:
     - name: SSH | Check user "{{ ssh_key_user }}" exists
       ansible.builtin.user:
@@ -25,7 +29,7 @@
       ansible.posix.authorized_key:
         user: "{{ ssh_key_user }}"
         state: present
-        key: "{{ lookup('pipe','cat files/*id_rsa.pub') }}"
+        key: "{{ lookup('pipe', 'cat files/*id_rsa.pub') }}"
         exclusive: false
 
     - name: SSH | known_hosts | For each host, scan for its ssh public key
@@ -48,7 +52,3 @@
       no_log: true
       loop: "{{ ssh_known_host_results.results }}"
       when: item.rc == 0 and item.stdout | length > 0
-  ignore_errors: true
-  when: enable_ssh_key_based_authentication is defined and
-        enable_ssh_key_based_authentication | bool
-  tags: ssh

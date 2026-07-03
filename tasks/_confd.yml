@@ -44,7 +44,10 @@
   ansible.builtin.copy:
     src: confd.service
     dest: /etc/systemd/system/confd.service
+    owner: root
+    group: root
+    mode: 0644
   notify: restart confd
   tags: confd
 
-- meta: flush_handlers
+- ansible.builtin.meta: flush_handlers

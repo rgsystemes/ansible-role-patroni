@@ -1,5 +1,6 @@
 ---
 - name: PostgreSQL | Add PostgreSQL repository
+  tags: postgresql
   block:
     - name: PostgreSQL | Ensure keyrings directory exists
       ansible.builtin.file:
@@ -18,9 +19,9 @@
         repo: "{{ postgresql_apt_repository }}"
         state: present
         update_cache: true
-  tags: postgresql
 
 - name: PostgreSQL | Prepare PostgreSQL for install
+  tags: postgresql
   block:
     - name: PostgreSQL | Install postgresql-common
       ansible.builtin.apt:
@@ -46,7 +47,9 @@
       ansible.builtin.copy:
         src: postgresql.logrotate
         dest: /etc/logrotate.d/postgresql
-  tags: postgresql
+        owner: root
+        group: root
+        mode: '0644'
 
 - name: PostgreSQL | Install PostgreSQL packages
   ansible.builtin.apt:
@@ -65,4 +68,7 @@
     content: |
       postgres  ALL=(ALL)  NOPASSWD: ALL
     force: true
+    owner: root
+    group: root
+    mode: '0640'
   tags: postgresql

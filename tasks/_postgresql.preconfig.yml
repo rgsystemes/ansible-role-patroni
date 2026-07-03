@@ -122,6 +122,7 @@
 
     - name: PostgreSQL | Check PostgreSQL on master
       when: is_master is defined and is_master | bool
+      tags: patroni
       block:
         - name: PostgreSQL | check PostgreSQL is started on Master
           become: true

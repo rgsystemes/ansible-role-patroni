@@ -35,6 +35,9 @@
   ansible.builtin.copy:
     src: pgbouncer.logrotate
     dest: /etc/logrotate.d/pgbouncer
+    owner: root
+    group: root
+    mode: 0644
   tags: pgbouncer
 
 - name: PGBouncer | Calculate pool_size
@@ -64,14 +67,14 @@
 
 - name: PGBouncer | Set max_connections from vars if it defined
   ansible.builtin.set_fact:
-    max_connections: "{{ item.value|default(100, true) }}"
+    max_connections: "{{ item.value | default(100, true) }}"
   when: item.option == "max_connections"
   loop: "{{ postgresql_parameters }}"
   tags: pgbouncer
 
 - name: PGBouncer | Failed when total_pool_size > max_connections
   ansible.builtin.fail:
-    msg: "total_pool_size: {{ total_pool_size  }} > max_connections: {{ max_connections }}. Need change settings"
+    msg: "total_pool_size: {{ total_pool_size }} > max_connections: {{ max_connections }}. Need change settings"
   when: pgbouncer_pools is defined and pgbouncer_pools | length > 0 and total_pool_size | int > max_connections | int
   tags: pgbouncer
 
@@ -105,4 +108,5 @@
   when: existing_pgcluster is not defined or not existing_pgcluster | bool
   tags: pgbouncer
 
-- meta: flush_handlers
+- name: PGBouncer | Flush handlers to restart pgbouncer service
+  ansible.builtin.meta: flush_handlers

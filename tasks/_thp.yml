@@ -10,4 +10,5 @@
   when: (disable_thp is defined and disable_thp | bool)
   tags: thp
 
-- meta: flush_handlers
+- name: THP | Restart disable-transparent-huge-pages service
+  ansible.builtin.meta: flush_handlers

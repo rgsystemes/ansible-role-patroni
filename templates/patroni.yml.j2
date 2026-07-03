@@ -25,7 +25,7 @@ restapi:
   connect_address: {{ ansible_facts['default_ipv4']['address'] }}:{{ patroni_restapi_port }}
 
 etcd3:
-{% if not dcs_exists|bool %}
+{% if not dcs_exists | bool %}
   hosts: {% for host in groups['patroni'] %}{{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:2379{% if not loop.last %},{% endif %}{% endfor %}
 {% else %}
   hosts: {% for etcd_hosts in patroni_etcd_hosts %}{{etcd_hosts.host}}:{{etcd_hosts.port}}{% if not loop.last %},{% endif %}{% endfor %}
@@ -73,7 +73,7 @@ bootstrap:
   initdb:  # List options to be passed on to initdb
     - encoding: {{ postgresql_encoding }}
     - locale: {{ postgresql_locale }}
-  {% if postgresql_data_checksums|bool %}
+  {% if postgresql_data_checksums | bool %}
     - data-checksums
   {% endif %}
 {% endif %}
@@ -84,7 +84,7 @@ bootstrap:
 
 
 postgresql:
-{% if not with_haproxy_load_balancing|bool and not pgbouncer_install|bool and (cluster_vip is defined and cluster_vip | length > 0) %}
+{% if not with_haproxy_load_balancing | bool and not pgbouncer_install | bool and (cluster_vip is defined and cluster_vip | length > 0) %}
   listen: {{ ansible_facts['default_ipv4']['address'] }},{{ cluster_vip }},127.0.0.1:{{ postgresql_port }}
 {% else %}
   listen: {{ ansible_facts['default_ipv4']['address'] }},127.0.0.1:{{ postgresql_port }}

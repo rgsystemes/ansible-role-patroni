@@ -63,7 +63,9 @@
 
     - name: PostgreSQL | data directory check result
       ansible.builtin.fail:
-        msg: "Whoops! data directory {{ postgresql_data_dir }} is already initialized. Set postgresql_exists: 'true' to manage an existing cluster."
+        msg: >-
+          Whoops! data directory {{ postgresql_data_dir }} is already initialized.
+          Set postgresql_exists: 'true' to manage an existing cluster.
       when: pgdata_initialized.stat.exists is defined and
             pgdata_initialized.stat.exists
 

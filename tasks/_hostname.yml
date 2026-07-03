@@ -16,5 +16,5 @@
     owner: root
     group: root
     mode: 0644
-  when: openstack is defined and openstack|bool
+  when: openstack is defined and openstack | bool
   tags: hostname

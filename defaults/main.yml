@@ -269,7 +269,7 @@ pgbouncer_max_db_connections: 1000
 pgbouncer_query_wait_timeout: 120
 
 # Patroni variables
-patroni_new_node: false # Set to 'true' when adding a new node to an existing cluster
+patroni_new_node: false
 patroni_cluster_name: "postgres-cluster"
 patroni_cluster_bootstrap_method: "initdb"
 patroni_install_version: "3.0.2"

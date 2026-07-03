@@ -50,5 +50,5 @@
       when: item.rc == 0 and item.stdout | length > 0
   ignore_errors: true
   when: enable_ssh_key_based_authentication is defined and
-        enable_ssh_key_based_authentication|bool
+        enable_ssh_key_based_authentication | bool
   tags: ssh

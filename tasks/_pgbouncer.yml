@@ -91,7 +91,7 @@
     owner: postgres
     group: postgres
     mode: 0640
-  when: existing_pgcluster is not defined or not existing_pgcluster|bool
+  when: existing_pgcluster is not defined or not existing_pgcluster | bool
   tags: pgbouncer
 
 - name: PGBouncer | Configure pgbouncer.ini
@@ -102,7 +102,7 @@
     group: postgres
     mode: 0640
   notify: restart pgbouncer
-  when: existing_pgcluster is not defined or not existing_pgcluster|bool
+  when: existing_pgcluster is not defined or not existing_pgcluster | bool
   tags: pgbouncer
 
 - meta: flush_handlers

@@ -7,7 +7,7 @@
     group: root
     mode: 0644
   notify: restart disable-thp
-  when: (disable_thp is defined and disable_thp|bool)
+  when: (disable_thp is defined and disable_thp | bool)
   tags: thp
 
 - meta: flush_handlers

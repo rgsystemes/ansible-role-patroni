@@ -7,7 +7,7 @@
     group: root
     mode: 0644
   notify: restart io-scheduler
-  when: set_scheduler is defined and set_scheduler|bool
+  when: set_scheduler is defined and set_scheduler | bool
   tags: ioscheduler
 
 - meta: flush_handlers

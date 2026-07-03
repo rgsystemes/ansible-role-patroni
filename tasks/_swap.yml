@@ -13,8 +13,12 @@
   tags: swap
 
 - name: Swap | If the swap exists and the size is not equal to swap_file_size_mb
-  when: (swap_exists.stdout is defined and swap_exists.stdout | length > 1) and
-        ((swap_exists.stdout_lines | map('trim') | map('int') | sum / 1024 / 1024) | round | int != swap_file_size_mb | int)
+  vars:
+    _current_swap_mb: >-
+      {{ (swap_exists.stdout_lines | map('trim') | map('int') | sum / 1024 / 1024) | round | int }}
+  when:
+    - swap_exists.stdout is defined and swap_exists.stdout | length > 1
+    - _current_swap_mb | int != swap_file_size_mb | int
   tags: swap
   block:
     - name: Disable all existing swaps

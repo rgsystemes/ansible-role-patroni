@@ -1,20 +1,27 @@
 ---
-
 - name: PostgreSQL | Add PostgreSQL repository
+  tags: postgresql
   block:
-    - name: PostgreSQL | Add repository apt-key
-      ansible.builtin.apt_key:
+    - name: PostgreSQL | Ensure keyrings directory exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: PostgreSQL | Download repository GPG key
+      ansible.builtin.get_url:
         url: "{{ postgresql_apt_repository_keys }}"
-        state: present
+        dest: "{{ postgresql_apt_keyring_path }}"
+        mode: '0644'
 
     - name: PostgreSQL | Add repository
       ansible.builtin.apt_repository:
         repo: "{{ postgresql_apt_repository }}"
         state: present
         update_cache: true
-  tags: ['postgresql']
 
 - name: PostgreSQL | Prepare PostgreSQL for install
+  tags: postgresql
   block:
     - name: PostgreSQL | Install postgresql-common
       ansible.builtin.apt:
@@ -35,12 +42,14 @@
       ansible.builtin.file:
         dest: /etc/logrotate.d/postgresql-common
         state: absent
-  
+
     - name: PostgreSQL | Enable log rotation with logrotate
       ansible.builtin.copy:
         src: postgresql.logrotate
         dest: /etc/logrotate.d/postgresql
-  tags: ['postgresql']
+        owner: root
+        group: root
+        mode: '0644'
 
 - name: PostgreSQL | Install PostgreSQL packages
   ansible.builtin.apt:
@@ -51,7 +60,7 @@
   until: apt_status is success
   delay: 5
   retries: 3
-  tags: ['postgresql']
+  tags: postgresql
 
 - name: PostgreSQL | Add postgres to /etc/sudoers.d/
   ansible.builtin.copy:
@@ -59,4 +68,7 @@
     content: |
       postgres  ALL=(ALL)  NOPASSWD: ALL
     force: true
-  tags: ['postgresql']
+    owner: root
+    group: root
+    mode: '0640'
+  tags: postgresql

@@ -1,5 +1,4 @@
 ---
-
 - name: Apt | Update apt cache
   ansible.builtin.apt:
     update_cache: true
@@ -8,13 +7,11 @@
   until: apt_status is success
   delay: 5
   retries: 3
-  tags: ['apt']
+  tags: apt
 
 - name: Apt | Install packages
   ansible.builtin.apt:
-    pkg:
-      - gnupg
-      - apt-transport-https
+    name:
       - iproute2
       - python3-psycopg2
       - iptables
@@ -23,4 +20,4 @@
   until: apt_status is success
   delay: 5
   retries: 3
-  tags: ['apt']
+  tags: apt

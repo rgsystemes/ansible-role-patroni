@@ -2,7 +2,7 @@
 ---
 
 scope: {{ patroni_cluster_name }}
-name: {{ ansible_hostname }}
+name: {{ ansible_facts['hostname'] }}
 namespace: /service/
 
 {% if patroni_log_destination == 'logfile' %}
@@ -21,21 +21,12 @@ log:
 {% endif %}
 
 restapi:
-  listen: {{ ansible_default_ipv4.address }}:{{ patroni_restapi_port }}
-  connect_address: {{ ansible_default_ipv4.address }}:{{ patroni_restapi_port }}
-#  certfile: /etc/ssl/certs/ssl-cert-snakeoil.pem
-#  keyfile: /etc/ssl/private/ssl-cert-snakeoil.key
-#  authentication:
-#    username: username
-#    password: password
+  listen: {{ ansible_facts['default_ipv4']['address'] }}:{{ patroni_restapi_port }}
+  connect_address: {{ ansible_facts['default_ipv4']['address'] }}:{{ patroni_restapi_port }}
 
 etcd3:
-{% if not dcs_exists|bool %}
-  {% if 'patroni' in group_names %}
-  hosts: {% for host in groups['patroni'] %}{{ hostvars[host].ansible_default_ipv4.address }}:2379{% if not loop.last %},{% endif %}{% endfor %}
-  {% else %}
-  hosts: {% for host in groups['postgresql'] %}{{ hostvars[host].ansible_default_ipv4.address }}:2379{% if not loop.last %},{% endif %}{% endfor %}
-  {% endif %}
+{% if not dcs_exists | bool %}
+  hosts: {% for host in groups['patroni'] %}{{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:2379{% if not loop.last %},{% endif %}{% endfor %}
 {% else %}
   hosts: {% for etcd_hosts in patroni_etcd_hosts %}{{etcd_hosts.host}}:{{etcd_hosts.port}}{% if not loop.last %},{% endif %}{% endfor %}
 {% endif %}
@@ -82,7 +73,7 @@ bootstrap:
   initdb:  # List options to be passed on to initdb
     - encoding: {{ postgresql_encoding }}
     - locale: {{ postgresql_locale }}
-  {% if postgresql_data_checksums|bool %}
+  {% if postgresql_data_checksums | bool %}
     - data-checksums
   {% endif %}
 {% endif %}
@@ -93,12 +84,12 @@ bootstrap:
 
 
 postgresql:
-{% if not with_haproxy_load_balancing|bool and not pgbouncer_install|bool and (cluster_vip is defined and cluster_vip | length > 0) %}
-  listen: {{ ansible_default_ipv4.address }},{{ cluster_vip }},127.0.0.1:{{ postgresql_port }}
+{% if not with_haproxy_load_balancing | bool and not pgbouncer_install | bool and (cluster_vip is defined and cluster_vip | length > 0) %}
+  listen: {{ ansible_facts['default_ipv4']['address'] }},{{ cluster_vip }},127.0.0.1:{{ postgresql_port }}
 {% else %}
-  listen: {{ ansible_default_ipv4.address }},127.0.0.1:{{ postgresql_port }}
+  listen: {{ ansible_facts['default_ipv4']['address'] }},127.0.0.1:{{ postgresql_port }}
 {% endif %}
-  connect_address: {{ ansible_default_ipv4.address }}:{{ postgresql_port }}
+  connect_address: {{ ansible_facts['default_ipv4']['address'] }}:{{ postgresql_port }}
 {% if patroni_superuser_username == 'postgres' %}
   use_unix_socket: true
 {% endif %}
@@ -173,7 +164,3 @@ tags:
   noloadbalance: false
   clonefrom: false
   nosync: false
-
-  # specify a node to replicate from (cascading replication)
-#  replicatefrom: (node name)
-

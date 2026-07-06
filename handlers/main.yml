@@ -1,5 +1,5 @@
 ---
-
+# THP
 - name: Start disable-transparent-huge-pages service
   ansible.builtin.systemd:
     daemon_reload: true
@@ -8,7 +8,9 @@
     enabled: true
   listen: restart disable-thp
 
-- name: Start io-scheduler service
+
+# IO Scheduler
+- name: Start IO Scheduler service
   ansible.builtin.systemd:
     daemon_reload: true
     name: io-scheduler
@@ -16,7 +18,9 @@
     enabled: true
   listen: restart io-scheduler
 
-- name: Restart haproxy service
+
+# HAProxy
+- name: Restart HAProxy service
   ansible.builtin.systemd:
     daemon_reload: true
     name: haproxy
@@ -34,7 +38,9 @@
   ignore_errors: false
   listen: restart haproxy
 
-- name: Restart confd service
+
+# Confd
+- name: Restart Confd service
   ansible.builtin.systemd:
     daemon_reload: true
     name: confd
@@ -42,7 +48,9 @@
     state: restarted
   listen: restart confd
 
-- name: Restart keepalived service
+
+# KeepAlived
+- name: Restart KeepAlived service
   ansible.builtin.systemd:
     daemon_reload: true
     name: keepalived
@@ -50,13 +58,15 @@
     state: restarted
   listen: restart keepalived
 
-- name: Wait for the cluster ip address (VIP) "{{ cluster_vip }}" is running
-  ansible.builtin.wait_for:
-    host: "{{ cluster_vip }}"
-    port: "{{ ansible_ssh_port | default(22) }}"
-    state: started
-    timeout: 60
-    delay: 2
+- name: Wait for cluster VIP to be running - {{ cluster_vip }}
+  ansible.builtin.command: ip addr show
+  register: ip_addr_result
+  until: cluster_vip in ip_addr_result.stdout
+  retries: 30
+  delay: 2
+  changed_when: false
+  failed_when: false
+  when: cluster_vip != '0.0.0.0' and (is_master is defined and is_master | bool)
   listen: restart keepalived
 
 - name: Restart KeepAlived exporter
@@ -77,7 +87,9 @@
   ignore_errors: false
   listen: restart keepalived-exporter
 
-- name: Restart pgbouncer service
+
+# PGBouncer
+- name: Restart PGBouncer service
   ansible.builtin.systemd:
     daemon_reload: true
     name: pgbouncer
@@ -85,7 +97,7 @@
     state: restarted
   listen: restart pgbouncer
 
-- name: Wait for port "{{ pgbouncer_listen_port }}" to become open on the host
+- name: Wait for port to become open on the host - {{ pgbouncer_listen_port }}
   ansible.builtin.wait_for:
     port: "{{ pgbouncer_listen_port }}"
     host: "{{ hostvars[inventory_hostname]['inventory_hostname'] }}"
@@ -95,12 +107,12 @@
   ignore_errors: false
   listen: restart pgbouncer
 
-- name: Reload pgbouncer service
+- name: Reload PGBouncer service
   ansible.builtin.systemd:
     name: pgbouncer
     state: reloaded
   listen: reload pgbouncer
-  ignore_errors: true
+  failed_when: false
 
 - name: Restart PGBouncer exporter
   ansible.builtin.systemd:

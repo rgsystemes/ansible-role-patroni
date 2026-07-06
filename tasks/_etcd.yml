@@ -1,14 +1,13 @@
 ---
-
 - name: Etcd | Install etcd packages
   ansible.builtin.apt:
-    name: "etcd={{ etcd_version }}"
+    name: "{{ etcd_packages }}"
     state: present
   register: etcd_status
   until: etcd_status is success
   delay: 5
   retries: 3
-  tags: ['etcd']
+  tags: etcd
 
 - name: Etcd | Create etcd configuration directory
   ansible.builtin.file:
@@ -17,9 +16,9 @@
     owner: root
     group: root
     mode: 0750
-  tags: ['etcd']
+  tags: etcd
 
-- name: Etcd | Generate conf file "/etc/etcd/etcd.conf"
+- name: Etcd | Generate conf files
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
@@ -31,33 +30,29 @@
       dest: /etc/etcd/etcd.conf
     - src: etcd.service.j2
       dest: /etc/systemd/system/etcd.service
-  tags: ['etcd']
+  register: etcd_config_result
+  tags: etcd
 
 - name: Etcd | Stop etcd service
   ansible.builtin.systemd:
     name: etcd
     state: stopped
-  tags: ['etcd']
+  when: etcd_config_result is changed
+  tags: etcd
 
 - name: Etcd | Add a node to etcd cluster
+  when: patroni_new_node | bool
+  tags: etcd
   block:
     - name: Etcd | Remove data directory
       ansible.builtin.file:
         path: "{{ etcd_data_dir }}/member"
         state: absent
 
-    - name: Etcd | Get Leader
-      ansible.builtin.shell: |
-        etcdctl member list | grep "isLeader=true" | awk '{print substr($2, 6)}'
-      register: etcd_leader
-      delegate_to: "{{ groups.patroni[0] }}"
-
     - name: Etcd | Add a member to etcd cluster
       ansible.builtin.shell: |
-        etcdctl member add {{ ansible_hostname }} http://{{ ansible_default_ipv4.address }}:2380
-      delegate_to: "{{ etcd_leader.stdout }}"
-  when: new_etcd_node is defined
-  tags: ['etcd']
+        etcdctl member add {{ ansible_facts['hostname'] }} http://{{ ansible_default_ipv4.address }}:2380
+      delegate_to: "{{ groups['patroni'][0] }}"
 
 - name: Etcd | Enable and start etcd service
   ansible.builtin.systemd:
@@ -65,7 +60,7 @@
     name: etcd
     enabled: true
     state: started
-  tags: ['etcd']
+  tags: etcd
 
 - name: Etcd | Wait for port 2379 to become open on the host
   ansible.builtin.wait_for:
@@ -75,7 +70,7 @@
     timeout: 60
     delay: 10
   ignore_errors: false
-  tags: ['etcd']
+  tags: etcd
 
 - name: Etcd | Check etcd cluster health
   block:
@@ -83,7 +78,7 @@
       ansible.builtin.shell: |
         ETCDCTL_API=3 /usr/bin/etcdctl endpoint health --endpoints=http://{{ inventory_hostname }}:2379
       register: etcd_health_result
-      until: "'is healthy' in etcd_health_result.stderr"
+      until: "'is healthy' in etcd_health_result.stderr or 'is healthy' in etcd_health_result.stdout"
       retries: 5
       delay: 10
       changed_when: false
@@ -91,14 +86,11 @@
 
     - name: Etcd | Display cluster health
       ansible.builtin.debug:
-        msg: "{{ etcd_health_result.stderr }}"
-    
+        msg: "{{ etcd_health_result.stderr }} {{ etcd_health_result.stdout }}"
+
     - name: Etcd | Display member list
       ansible.builtin.shell: |
         etcdctl member list
       delegate_to: "{{ groups.patroni[0] }}"
-  tags: ['etcd']
-
-- meta: end_play
-  when: new_etcd_node is defined
-  tags: ['etcd']
+      changed_when: false
+  tags: etcd

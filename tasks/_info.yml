@@ -1,6 +1,7 @@
 ---
-
 - name: Info | Display cluster PostgreSQL health
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | Check postgresql cluster health
       run_once: true
@@ -9,17 +10,18 @@
       ansible.builtin.command: patronictl -c /etc/patroni/patroni.yml list
       register: patronictl_result
       environment:
-        PATH: "{{ ansible_env.PATH }}:/usr/bin:/usr/local/bin"
+        PATH: "{{ ansible_facts['env']['PATH'] }}:/usr/bin:/usr/local/bin"
       changed_when: false
 
     - name: Info | PostgreSQL Cluster health
       run_once: true
       ansible.builtin.debug:
         var: patronictl_result.stdout_lines
-  ignore_errors: true
-  tags: ['info']
 
 - name: Info | Display cluster PostgreSQL databases
+  when: is_master is defined and is_master | bool
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | Get postgresql database list
       run_once: true
@@ -48,17 +50,17 @@
           ORDER BY 1
         \""
       register: dbs_result
-      when: is_master is defined and is_master|bool
       changed_when: false
 
     - name: Info | PostgreSQL list of databases
       run_once: true
       ansible.builtin.debug:
         var: dbs_result.stdout_lines
-  ignore_errors: true
-  tags: ['info']
 
 - name: Info | Display cluster PostgreSQL connections informations
+  when: cluster_vip is defined and cluster_vip | length > 0
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | PostgreSQL Cluster connection info
       run_once: true
@@ -94,40 +96,46 @@
         msg:
           - +------------------------------------------------+
           - address (VIP) {{ cluster_vip }}
-          - port {% if pgbouncer_install %}{{ pgbouncer_listen_port }} (pgbouncer){% else %}{{ postgresql_port }}{% endif %}
+          - port {{ pgbouncer_install | bool | ternary(pgbouncer_listen_port ~ ' (pgbouncer)', postgresql_port) }}
           - +------------------------------------------------+
       when:
         - not with_haproxy_load_balancing | bool
-  when: cluster_vip is defined and cluster_vip | length > 0
-  ignore_errors: true
-  tags: ['info']
 
 - name: Info | Display cluster VIP informations
+  when: cluster_vip is defined and cluster_vip | length > 0
+  tags: info
+  ignore_errors: true
   block:
     - name: Info | Get vip info
       ansible.builtin.set_fact:
         man_ip: "{{ item }}"
-      loop: "{{ ansible_all_ipv4_addresses }}"
+      loop: "{{ ansible_facts['all_ipv4_addresses'] }}"
       when: item == cluster_vip
 
     - name: Info | Virtual IP Address (VIP) info
       ansible.builtin.debug:
         msg:
           "Cluster ip address (VIP) {{ cluster_vip }}
-           is running on server {{ ansible_hostname }}"
+           is running on server {{ ansible_facts['hostname'] }}"
       when: man_ip is defined and man_ip == cluster_vip
-  when: (cluster_vip is defined and cluster_vip | length > 0)
-  ignore_errors: true
-  tags: ['info']
 
 
 - name: Info | Display nodes informations
-  block: 
+  when: cluster_vip is not defined or cluster_vip | length < 1
+  tags: info
+  ignore_errors: true
+  block:
     - name: Info | Create list of nodes
       run_once: true
       ansible.builtin.set_fact:
-        haproxy_nodes: "{% if 'patroni' in group_names %}{% for host in groups['patroni'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% else %}{% for host in groups['balancers'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}"
-        postgres_cluster_nodes: "{% if 'patroni' in group_names %}{% for host in groups['patroni'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% else %}{% for host in groups['postgresql'] %}{{ hostvars[host].ansible_default_ipv4.address }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}"
+        haproxy_nodes: >-
+          {{ groups['patroni']
+             | map('extract', hostvars, ['ansible_facts', 'default_ipv4', 'address'])
+             | join(',') }}
+        postgres_cluster_nodes: >-
+          {{ groups['patroni']
+             | map('extract', hostvars, ['ansible_facts', 'default_ipv4', 'address'])
+             | join(',') }}
 
     - name: Info | PostgreSQL Cluster connection info
       run_once: true
@@ -163,10 +171,7 @@
         msg:
           - +------------------------------------------------+
           - address {{ postgres_cluster_nodes }}
-          - port {% if pgbouncer_install %}{{ pgbouncer_listen_port }} (pgbouncer){% else %}{{ postgresql_port }}{% endif %}
+          - port {{ pgbouncer_install | bool | ternary(pgbouncer_listen_port ~ ' (pgbouncer)', postgresql_port) }}
           - +------------------------------------------------+
       when:
         - not with_haproxy_load_balancing | bool
-  ignore_errors: true
-  when: cluster_vip is not defined or cluster_vip | length < 1
-  tags: ['info']

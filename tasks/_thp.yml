@@ -1,5 +1,4 @@
 ---
-
 - name: THP | Create systemd service disable-transparent-huge-pages
   ansible.builtin.copy:
     src: disable-transparent-huge-pages.service
@@ -8,7 +7,8 @@
     group: root
     mode: 0644
   notify: restart disable-thp
-  when: (disable_thp is defined and disable_thp|bool)
-  tags: ['thp']
+  when: (disable_thp is defined and disable_thp | bool)
+  tags: thp
 
-- meta: flush_handlers
+- name: THP | Restart disable-transparent-huge-pages service
+  ansible.builtin.meta: flush_handlers

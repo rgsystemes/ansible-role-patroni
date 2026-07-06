@@ -1,11 +1,14 @@
 ---
-
-- name: "Make sure {{ postgresql_data_dir }}/pg_wal is symlink"
+- name: "Make sure pg_wal is symlink"
   ansible.builtin.stat:
     path: "{{ postgresql_data_dir }}/pg_wal"
   register: sym
+  tags: patroni
 
-- block:  # synchronize WAL`s if wal dir exist (and is not symlink)
+- name: "Synchronize WAL`s if wal dir exist"
+  tags: patroni
+  when: sym.stat.exists and not sym.stat.islnk | bool
+  block:
     - name: Make sure rsync is installed (for synchronize wal dir)
       ansible.builtin.apt:
         name:
@@ -45,7 +48,6 @@
     - name: "Rename pg_wal to pg_wal_old"
       ansible.builtin.command: mv {{ postgresql_data_dir }}/pg_wal {{ postgresql_data_dir }}/pg_wal_old
       register: mv_result
-  when: sym.stat.exists and not sym.stat.islnk|bool
 
 - name: "Create symlink {{ postgresql_data_dir }}/pg_wal -> {{ postgresql_wal_dir }}"
   become: true
@@ -54,9 +56,13 @@
     src: "{{ postgresql_wal_dir }}"
     dest: "{{ postgresql_data_dir }}/pg_wal"
     state: link
-  when: sym.stat.islnk is not defined or not sym.stat.islnk|bool
+  when: sym.stat.islnk is not defined or not sym.stat.islnk | bool
+  tags: patroni
 
-- block:  # start patroni
+- name: Start patroni service and check health
+  when: patroni_stop_result is changed
+  tags: patroni
+  block:
     - name: Start patroni service
       ansible.builtin.systemd:
         name: patroni
@@ -79,7 +85,6 @@
       until: replica_result.status == 200
       retries: 120
       delay: 10
-  when: patroni_stop_result is changed
 
 - name: "Remove pg_wal_old directory"
   ansible.builtin.file:
@@ -88,3 +93,4 @@
   when:
     - replica_result.status is defined
     - replica_result.status == 200
+  tags: patroni

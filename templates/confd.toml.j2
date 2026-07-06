@@ -2,16 +2,10 @@ backend = "etcdv3"
 interval = 10
 watch = true
 nodes = [
-{% if 'patroni' in group_names %}
-  {% for host in groups['patroni'] %}
-  "http://{{ hostvars[host].ansible_default_ipv4.address }}:2379",
-  {% endfor %}
-{% else %}
-  {% for host in groups['etcd'] %}
-  "http://{{ hostvars[host].ansible_default_ipv4.address }}:2379",
-  {% endfor %}
-{% endif %}
- {% for etcd_hosts in patroni_etcd_hosts %}
+{% for host in groups['patroni'] %}
+  "http://{{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:2379",
+{% endfor %}
+{% for etcd_hosts in patroni_etcd_hosts %}
   "http://{{etcd_hosts.host}}:{{etcd_hosts.port}}",
 {% endfor %}
 ]

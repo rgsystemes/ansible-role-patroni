@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart={{ pgbouncer_bin_dir }}/pgbouncer_exporter --pgBouncer.connectionString="postgres://postgres:{{ patroni_superuser_password }}@{{ ansible_default_ipv4.address }}:{{ pgbouncer_listen_port | default(6432) }}/pgbouncer?sslmode=disable"
+ExecStart={{ pgbouncer_bin_dir }}/pgbouncer_exporter --pgBouncer.connectionString="postgres://postgres:{{ patroni_superuser_password }}@{{ ansible_facts['default_ipv4']['address'] }}:{{ pgbouncer_listen_port | default(6432) }}/pgbouncer?sslmode=disable"
 
 SyslogIdentifier=pgbouncer_exporter
 Restart=always

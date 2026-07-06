@@ -1,0 +1,59 @@
+---
+
+- name: HAProxy | Install HAProxy
+  ansible.builtin.apt:
+    name: "haproxy{% if haproxy_version | length > 0 %}={{ haproxy_version }}{% endif %}"
+    state: present
+    update_cache: true
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
+  tags: haproxy
+
+- name: HAProxy | Generate conf file "/etc/haproxy/haproxy.cfg"
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: haproxy
+    group: haproxy
+    mode: 0644
+  notify: restart haproxy
+  when: postgresql_cluster_maintenance is not defined or not postgresql_cluster_maintenance | bool
+  tags: haproxy
+
+- name: HAProxy | Generate systemd file
+  ansible.builtin.copy:
+    src: haproxy.service
+    dest: /etc/systemd/system/haproxy.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart haproxy
+  tags: haproxy
+
+- name: HAProxy | Flush handlers to restart haproxy service
+  ansible.builtin.meta: flush_handlers
+  tags: haproxy
+
+- name: SELinux | Manage SELinux for HAProxy
+  when: ansible_selinux.status is defined and ansible_selinux.status == 'enabled'
+  ignore_errors: true
+  tags: haproxy
+  block:
+    - name: SELinux | set haproxy_connect_any flag to enable tcp connections
+      ansible.posix.seboolean:
+        name: haproxy_connect_any
+        state: true
+        persistent: true
+
+    - name: SELinux | change the haproxy_t domain to permissive
+      community.general.selinux_permissive:
+        name: haproxy_t
+        permissive: true
+
+- name: HAProxy | Update log rotation with logrotate
+  ansible.builtin.copy:
+    src: haproxy.logrotate
+    dest: /etc/logrotate.d/haproxy
+  tags: haproxy

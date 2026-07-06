@@ -1,0 +1,112 @@
+---
+- name: PGBouncer | Install PGBouncer package
+  ansible.builtin.apt:
+    name: "pgbouncer{% if pgbouncer_version | length > 0 %}={{ pgbouncer_version }}{% endif %}"
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
+  tags: pgbouncer
+
+- name: PGBouncer | Check if custom service file already exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/pgbouncer.service
+  register: _pgbouncer_custom_service
+  tags: pgbouncer
+
+- name: PGBouncer | Stop and disable standard init script
+  ansible.builtin.systemd:
+    name: pgbouncer
+    state: stopped
+    enabled: false
+  when: not _pgbouncer_custom_service.stat.exists
+  tags: pgbouncer
+
+- name: PGBouncer | Copy systemd service file
+  ansible.builtin.template:
+    src: pgbouncer.service.j2
+    dest: /etc/systemd/system/pgbouncer.service
+    owner: postgres
+    group: postgres
+    mode: 0644
+  tags: pgbouncer
+
+- name: PGBouncer | Enable log rotation with logrotate
+  ansible.builtin.copy:
+    src: pgbouncer.logrotate
+    dest: /etc/logrotate.d/pgbouncer
+    owner: root
+    group: root
+    mode: 0644
+  tags: pgbouncer
+
+- name: PGBouncer | Calculate pool_size
+  ansible.builtin.set_fact:
+    defined_pool_size: >-
+      {{ defined_pool_size | default(0) | int
+         + item.pool_parameters
+         | regex_search('pool_size=(\\d+)')
+         | regex_replace('[^0-9]', '')
+         | default(pgbouncer_default_pool_size, true) | int }}
+  loop: "{{ pgbouncer_pools }}"
+  tags: pgbouncer
+
+- name: PGBouncer | Calculate total_pool_size
+  ansible.builtin.set_fact:
+    total_pool_size: >-
+      {{ defined_pool_size | default(0) | int
+         + (postgresql_databases | length | int
+            - pgbouncer_pools | length | int)
+         * (pgbouncer_default_pool_size | int) }}
+  tags: pgbouncer
+
+- name: PGBouncer | Set default value to max_connections
+  ansible.builtin.set_fact:
+    max_connections: 100
+  tags: pgbouncer
+
+- name: PGBouncer | Set max_connections from vars if it defined
+  ansible.builtin.set_fact:
+    max_connections: "{{ item.value | default(100, true) }}"
+  when: item.option == "max_connections"
+  loop: "{{ postgresql_parameters }}"
+  tags: pgbouncer
+
+- name: PGBouncer | Failed when total_pool_size > max_connections
+  ansible.builtin.fail:
+    msg: "total_pool_size: {{ total_pool_size }} > max_connections: {{ max_connections }}. Need change settings"
+  when: pgbouncer_pools is defined and pgbouncer_pools | length > 0 and total_pool_size | int > max_connections | int
+  tags: pgbouncer
+
+- name: Configure PGBouncer | Ensure config directory "{{ pgbouncer_conf_dir }}" exist
+  ansible.builtin.file:
+    path: "{{ pgbouncer_conf_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0750
+  tags: pgbouncer
+
+- name: PGBouncer | Create userlist.txt
+  ansible.builtin.template:
+    src: userlist.txt.j2
+    dest: "{{ pgbouncer_conf_dir }}/userlist.txt"
+    owner: postgres
+    group: postgres
+    mode: 0640
+  when: existing_pgcluster is not defined or not existing_pgcluster | bool
+  tags: pgbouncer
+
+- name: PGBouncer | Configure pgbouncer.ini
+  ansible.builtin.template:
+    src: pgbouncer.ini.j2
+    dest: "{{ pgbouncer_conf_dir }}/pgbouncer.ini"
+    owner: postgres
+    group: postgres
+    mode: 0640
+  notify: restart pgbouncer
+  when: existing_pgcluster is not defined or not existing_pgcluster | bool
+  tags: pgbouncer
+
+- name: PGBouncer | Flush handlers to restart pgbouncer service
+  ansible.builtin.meta: flush_handlers

@@ -1,19 +1,25 @@
 ---
-
 - name: Swap | Ensure swap exists
   ansible.builtin.command: swapon --show=SIZE --bytes --noheadings
   register: swap_exists
   changed_when: false
   when: swap_file_create | bool
-  tags: ['swap']
+  tags: swap
 
 - name: Swap | Display swap size
   ansible.builtin.debug:
-    msg: "swap_size_mb: {{ (swap_exists.stdout_lines|map('trim')|map('int')|sum / 1024 / 1024)|round|int }}"
+    msg: "swap_size_mb: {{ (swap_exists.stdout_lines | map('trim') | map('int') | sum / 1024 / 1024) | round | int }}"
   when: swap_exists.stdout is defined and swap_exists.stdout | length > 1
-  tags: ['swap']
+  tags: swap
 
 - name: Swap | If the swap exists and the size is not equal to swap_file_size_mb
+  vars:
+    _current_swap_mb: >-
+      {{ (swap_exists.stdout_lines | map('trim') | map('int') | sum / 1024 / 1024) | round | int }}
+  when:
+    - swap_exists.stdout is defined and swap_exists.stdout | length > 1
+    - _current_swap_mb | int != swap_file_size_mb | int
+  tags: swap
   block:
     - name: Disable all existing swaps
       ansible.builtin.command: swapoff --all
@@ -28,11 +34,14 @@
       ansible.builtin.file:
         path: "{{ swap_file_path }}"
         state: absent
-  when: (swap_exists.stdout is defined and swap_exists.stdout | length > 1) and
-        ((swap_exists.stdout_lines|map('trim')|map('int')|sum / 1024 / 1024)|round|int != swap_file_size_mb|int)
-  tags: ['swap']
 
 - name: Swap | If the swap does not exist
+  when: >-
+    (swap_exists.stdout is defined and swap_exists.stdout | length < 1)
+    or (swap_exists.stdout_lines is defined
+        and (swap_exists.stdout_lines | map('trim') | map('int') | sum
+             / 1024 / 1024) | round | int != swap_file_size_mb | int)
+  tags: swap
   block:
     - name: Swap | Create swap file
       ansible.builtin.command: |
@@ -44,7 +53,7 @@
         path: "{{ swap_file_path }}"
         owner: root
         group: root
-        mode: 0600
+        mode: '0600'
 
     - name: Swap | Make swap file if necessary
       ansible.builtin.command: mkswap {{ swap_file_path }}
@@ -60,6 +69,3 @@
         fstype: swap
         opts: sw
         state: present
-  when: (swap_exists.stdout is defined and swap_exists.stdout | length < 1) or
-        (swap_exists.stdout_lines is defined and (swap_exists.stdout_lines | map('trim') | map('int') | sum / 1024 / 1024) | round | int != swap_file_size_mb|int)
-  tags: ['swap']

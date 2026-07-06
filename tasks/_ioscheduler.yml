@@ -1,5 +1,4 @@
 ---
-
 - name: IO Scheduler | Create systemd unit file io-scheduler.service
   ansible.builtin.template:
     src: io-scheduler.service.j2
@@ -8,7 +7,9 @@
     group: root
     mode: 0644
   notify: restart io-scheduler
-  when: set_scheduler is defined and set_scheduler|bool
-  tags: ['ioscheduler']
+  when: set_scheduler is defined and set_scheduler | bool
+  tags: ioscheduler
 
-- meta: flush_handlers
+- name: IO Scheduler | Flush handlers to restart io-scheduler service
+  ansible.builtin.meta: flush_handlers
+  tags: ioscheduler

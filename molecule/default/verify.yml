@@ -1,0 +1,229 @@
+---
+- name: Verify
+  hosts: patroni
+  become: true
+  gather_facts: true
+
+  vars:
+    postgresql_version: "12"
+    patroni_restapi_port: 8008
+    postgresql_port: "5432"
+    cluster_vip: ""  # overridden dynamically before keepalived checks
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert etcd is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['etcd.service'] is defined
+          - ansible_facts.services['etcd.service'].state == 'running'
+        fail_msg: "etcd service is not running on {{ inventory_hostname }}"
+
+    - name: Assert patroni is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['patroni.service'] is defined
+          - ansible_facts.services['patroni.service'].state == 'running'
+        fail_msg: "patroni service is not running on {{ inventory_hostname }}"
+
+    - name: Assert pgbouncer is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['pgbouncer.service'] is defined
+          - ansible_facts.services['pgbouncer.service'].state == 'running'
+        fail_msg: "pgbouncer service is not running on {{ inventory_hostname }}"
+
+    - name: Check Patroni config file exists
+      ansible.builtin.stat:
+        path: /etc/patroni/patroni.yml
+      register: patroni_config_stat
+
+    - name: Assert Patroni config exists
+      ansible.builtin.assert:
+        that:
+          - patroni_config_stat.stat.exists
+        fail_msg: >-
+          Patroni configuration file not found
+          on {{ inventory_hostname }}
+
+    - name: Set Patroni IP
+      ansible.builtin.set_fact:
+        patroni_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
+
+    - name: Check Patroni REST API health endpoint
+      ansible.builtin.uri:
+        url: "http://{{ patroni_ip }}:{{ patroni_restapi_port }}/health"
+        status_code: [200, 503]
+        method: GET
+      register: patroni_health
+
+    - name: Assert Patroni API is responding
+      ansible.builtin.assert:
+        that:
+          - patroni_health.status in [200, 503]
+        fail_msg: >-
+          Patroni REST API not responding on
+          {{ ansible_facts['hostname'] }}:{{ patroni_restapi_port }}
+
+    - name: Check leader REST API returns 200 on master
+      ansible.builtin.uri:
+        url: "http://{{ patroni_ip }}:{{ patroni_restapi_port }}/leader"
+        status_code: 200
+        method: GET
+      when: is_master is defined and is_master | bool
+
+    - name: Check replica REST API on replicas
+      ansible.builtin.uri:
+        url: "http://{{ patroni_ip }}:{{ patroni_restapi_port }}/replica"
+        status_code: 200
+        method: GET
+      when: is_master is not defined or not is_master | bool
+
+    - name: Get cluster members via patronictl
+      become_user: postgres
+      ansible.builtin.command: >-
+        patronictl -c /etc/patroni/patroni.yml
+        list -f json
+      register: patronictl_output
+      changed_when: false
+      run_once: true
+      retries: 5
+      delay: 10
+      until: patronictl_output.rc == 0
+
+    - name: Parse cluster members
+      ansible.builtin.set_fact:
+        cluster_members: "{{ patronictl_output.stdout | from_json }}"
+      run_once: true
+
+    - name: Assert cluster has 3 members
+      ansible.builtin.assert:
+        that:
+          - cluster_members | length == 3
+        fail_msg: >-
+          Expected 3 cluster members,
+          got {{ cluster_members | length }}
+      run_once: true
+
+    - name: Count cluster leaders
+      ansible.builtin.set_fact:
+        cluster_leaders_count: >-
+          {{ cluster_members
+             | selectattr('Role', 'equalto', 'Leader')
+             | list | length }}
+      run_once: true
+
+    - name: Assert cluster has exactly 1 leader
+      ansible.builtin.assert:
+        that:
+          - cluster_leaders_count | int == 1
+        fail_msg: >-
+          Expected 1 Leader,
+          found {{ cluster_leaders_count }}
+      run_once: true
+
+    - name: Count running cluster members
+      ansible.builtin.set_fact:
+        cluster_running_count: >-
+          {{ cluster_members
+             | selectattr('State', 'equalto', 'running')
+             | list | length }}
+      run_once: true
+
+    - name: Assert all members are in running state
+      ansible.builtin.assert:
+        that:
+          - cluster_running_count | int == 3
+        fail_msg: >-
+          Not all members are running:
+          {{ cluster_running_count }}/3
+      run_once: true
+
+    - name: Check PostgreSQL accepts connections on master
+      become_user: postgres
+      ansible.builtin.command: >-
+        /usr/lib/postgresql/{{ postgresql_version }}/bin/pg_isready
+        -h 127.0.0.1 -p {{ postgresql_port }}
+      register: pg_isready_result
+      changed_when: false
+      when: is_master is defined and is_master | bool
+
+    - name: Assert PostgreSQL is ready on master
+      ansible.builtin.assert:
+        that:
+          - pg_isready_result.rc == 0
+        fail_msg: "PostgreSQL is not accepting connections on master"
+      when: is_master is defined and is_master | bool
+
+    - name: Check PGBouncer port is open
+      ansible.builtin.wait_for:
+        host: "{{ ansible_facts['default_ipv4']['address'] }}"
+        port: 6432
+        timeout: 10
+        state: started
+
+    - name: Compute cluster VIP from Docker bridge subnet
+      ansible.builtin.set_fact:
+        cluster_vip: >-
+          {{ (ansible_facts['default_ipv4']['address']
+              .split('.')[:3] | join('.')) ~ '.100' }}
+
+    - name: Assert keepalived is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['keepalived.service'] is defined
+          - ansible_facts.services['keepalived.service'].state == 'running'
+        fail_msg: "keepalived is not running on {{ inventory_hostname }}"
+
+    - name: Check VIP assignment on each node
+      ansible.builtin.command: ip addr show
+      register: ip_addr_output
+      changed_when: false
+
+    - name: Set vip_assigned fact per node
+      ansible.builtin.set_fact:
+        vip_assigned: "{{ cluster_vip in ip_addr_output.stdout }}"
+
+    - name: Wait for VRRP master election if VIP not yet assigned
+      ansible.builtin.command: ip addr show
+      register: ip_addr_retry
+      changed_when: false
+      retries: 12
+      delay: 5
+      until: cluster_vip in ip_addr_retry.stdout
+      run_once: true
+      when: not (groups['patroni']
+                 | map('extract', hostvars, 'vip_assigned')
+                 | select('equalto', true)
+                 | list | length > 0)
+
+    - name: Refresh VIP assignment facts after wait
+      ansible.builtin.command: ip addr show
+      register: ip_addr_final
+      changed_when: false
+      when: not vip_assigned
+
+    - name: Update vip_assigned after wait
+      ansible.builtin.set_fact:
+        vip_assigned: "{{ cluster_vip in ip_addr_final.stdout }}"
+      when: not vip_assigned
+
+    - name: Count nodes with VIP assigned
+      ansible.builtin.set_fact:
+        nodes_with_vip: >-
+          {{ groups['patroni']
+             | map('extract', hostvars, 'vip_assigned')
+             | select('equalto', true)
+             | list | length }}
+      run_once: true
+
+    - name: Assert VIP is assigned to exactly one node
+      ansible.builtin.assert:
+        that:
+          - nodes_with_vip | int == 1
+        fail_msg: >-
+          VIP {{ cluster_vip }} expected on 1 node,
+          found on {{ nodes_with_vip }}
+      run_once: true

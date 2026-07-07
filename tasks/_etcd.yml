@@ -54,6 +54,16 @@
         etcdctl member add {{ ansible_facts['hostname'] }} http://{{ ansible_default_ipv4.address }}:2380
       delegate_to: "{{ groups['patroni'][0] }}"
 
+    - name: Etcd | Propagate updated etcd.conf to existing nodes
+      ansible.builtin.template:
+        src: etcd.conf.j2
+        dest: /etc/etcd/etcd.conf
+        owner: root
+        group: root
+        mode: 0644
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+
 - name: Etcd | Enable and start etcd service
   ansible.builtin.systemd:
     daemon_reload: true

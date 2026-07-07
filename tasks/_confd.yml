@@ -50,4 +50,5 @@
   notify: restart confd
   tags: confd
 
-- ansible.builtin.meta: flush_handlers
+- name: Confd | Flush handlers to restart confd service
+  ansible.builtin.meta: flush_handlers

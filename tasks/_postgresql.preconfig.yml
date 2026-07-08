@@ -5,7 +5,7 @@
     state: directory
     owner: postgres
     group: postgres
-    mode: 01777
+    mode: '01777'
   when:
     - postgresql_stats_temp_directory_path is defined
     - postgresql_stats_temp_directory_path != 'none'
@@ -31,7 +31,7 @@
     state: directory
     owner: postgres
     group: postgres
-    mode: 0700
+    mode: '0700'
   when: postgresql_wal_dir is defined and postgresql_wal_dir | length > 0
   tags: patroni
 
@@ -88,7 +88,7 @@
         state: "{{ item }}"
         owner: postgres
         group: postgres
-        mode: 0700
+        mode: '0700'
       loop:
         - absent
         - directory
@@ -99,7 +99,7 @@
         state: "{{ item }}"
         owner: postgres
         group: postgres
-        mode: 0700
+        mode: '0700'
       loop:
         - absent
         - directory
@@ -158,7 +158,7 @@
             dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
             owner: postgres
             group: postgres
-            mode: 0640
+            mode: '0640'
 
         - name: PostgreSQL | reload for apply the pg_hba.conf
           become: true

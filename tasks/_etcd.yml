@@ -15,7 +15,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0750
+    mode: '0750'
   tags: etcd
 
 - name: Etcd | Generate conf files
@@ -24,7 +24,7 @@
     dest: "{{ item.dest }}"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   loop:
     - src: etcd.conf.j2
       dest: /etc/etcd/etcd.conf
@@ -60,7 +60,7 @@
         dest: /etc/etcd/etcd.conf
         owner: root
         group: root
-        mode: 0644
+        mode: '0644'
       delegate_to: "{{ item }}"
       loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
 
@@ -83,6 +83,7 @@
   tags: etcd
 
 - name: Etcd | Check etcd cluster health
+  tags: etcd
   block:
     - name: Etcd | Wait until the etcd cluster is healthy
       ansible.builtin.shell: |
@@ -103,4 +104,3 @@
         etcdctl member list
       delegate_to: "{{ groups.patroni[0] }}"
       changed_when: false
-  tags: etcd

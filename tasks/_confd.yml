@@ -3,7 +3,7 @@
   ansible.builtin.get_url:
     url: "{{ item }}"
     dest: /usr/local/bin/confd
-    mode: 0755
+    mode: '0755'
     timeout: 60
     validate_certs: false
   loop:
@@ -17,7 +17,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0755
+    mode: '0755'
   loop:
     - /etc/confd/conf.d
     - /etc/confd/templates
@@ -29,7 +29,7 @@
     dest: "{{ item.dest }}"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: restart confd
   loop:
     - src: confd.toml.j2
@@ -46,7 +46,7 @@
     dest: /etc/systemd/system/confd.service
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: restart confd
   tags: confd
 

@@ -13,7 +13,7 @@
       ansible.builtin.template:
         src: requirements.txt.j2
         dest: /tmp/requirements.txt
-        mode: 0644
+        mode: '0644
 
     - name: Patroni | Install setuptools
       ansible.builtin.pip:
@@ -50,7 +50,16 @@
     state: directory
     owner: postgres
     group: postgres
-    mode: 0750
+    mode: '0750'
+  tags: patroni
+
+- name: Patroni | Gather facts from existing nodes to get their IPs
+  ansible.builtin.setup:
+    gather_subset: ['network']
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+  when: patroni_new_node | bool
   tags: patroni
 
 - name: Patroni | Generate conf file "{{ patroni_conf_dir }}/patroni.yml"
@@ -59,7 +68,7 @@
     dest: "{{ patroni_conf_dir }}/patroni.yml"
     owner: postgres
     group: postgres
-    mode: 0640
+    mode: '0640'
   when: existing_pgcluster is not defined or not existing_pgcluster | bool
   tags: patroni
 
@@ -69,7 +78,7 @@
     owner: postgres
     group: postgres
     state: directory
-    mode: 0750
+    mode: '0750'
   when: patroni_log_destination == 'logfile'
   tags: patroni
 
@@ -79,5 +88,28 @@
     dest: /etc/systemd/system/patroni.service
     owner: postgres
     group: postgres
-    mode: 0644
+    mode: '0644'
   tags: patroni
+
+- name: Patroni | Update etcd hosts on existing nodes when adding a new node
+  when: patroni_new_node | bool
+  tags: patroni
+  block:
+    - name: Patroni | Propagate updated patroni.yml to existing nodes
+      ansible.builtin.template:
+        src: patroni.yml.j2
+        dest: "{{ patroni_conf_dir }}/patroni.yml"
+        owner: postgres
+        group: postgres
+        mode: '0640'
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: patroni_etcd_updated
+
+    - name: Patroni | Reload Patroni on existing nodes where etcd hosts changed
+      ansible.builtin.systemd:
+        name: patroni
+        state: reloaded
+      delegate_to: "{{ item.item }}"
+      loop: "{{ patroni_etcd_updated.results }}"
+      when: item.changed

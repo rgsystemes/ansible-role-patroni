@@ -17,7 +17,7 @@
     dest: /etc/haproxy/haproxy.cfg
     owner: haproxy
     group: haproxy
-    mode: 0644
+    mode: '0644'
   notify: restart haproxy
   when: postgresql_cluster_maintenance is not defined or not postgresql_cluster_maintenance | bool
   tags: haproxy
@@ -28,7 +28,7 @@
     dest: /etc/systemd/system/haproxy.service
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: restart haproxy
   tags: haproxy
 
@@ -56,4 +56,7 @@
   ansible.builtin.copy:
     src: haproxy.logrotate
     dest: /etc/logrotate.d/haproxy
+    owner: root
+    group: root
+    mode: '0644'
   tags: haproxy

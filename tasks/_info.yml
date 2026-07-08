@@ -19,7 +19,7 @@
         var: patronictl_result.stdout_lines
 
 - name: Info | Display cluster PostgreSQL databases
-  when: is_master is defined and is_master | bool
+  when: is_master is defined and is_master | bool and not patroni_remove_node | bool
   tags: info
   ignore_errors: true
   block:

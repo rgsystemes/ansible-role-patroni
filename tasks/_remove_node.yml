@@ -1,36 +1,12 @@
 ---
-- name: Patroni | Stop Patroni service
-  ansible.builtin.systemd:
-    name: patroni
-    state: stopped
-  tags: patroni
-
-- name: Etcd | Remove etcd member from cluster
-  tags: etcd
-  block:
-    - name: Etcd | Get etcd member ID of node to remove
-      ansible.builtin.shell: >-
-        ETCDCTL_API=3 etcdctl member list | awk '$2 == "name={{ ansible_facts["hostname"] }}" {gsub(/:/, "", $1); print $1}'
-      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
-      register: etcd_member_id
-      changed_when: false
-      failed_when: false
-
-    - name: Etcd | Remove member from etcd cluster
-      ansible.builtin.shell: >-
-        ETCDCTL_API=3 etcdctl member remove {{ etcd_member_id.stdout }}
-      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
-      when: etcd_member_id.stdout | length > 0
-      register: etcd_remove_result
-
-    - name: Etcd | Etcd member not found (already removed)
-      ansible.builtin.debug:
-        msg: "Etcd member '{{ ansible_facts['hostname'] }}' not found in member list, skipping removal."
-      when: etcd_member_id.stdout | trim | length == 0
-
 - name: Remove node | Remove Patroni DCS key from etcd
   tags: patroni
   block:
+    - name: Patroni | Stop Patroni service
+      ansible.builtin.systemd:
+        name: patroni
+        state: stopped
+
     - name: Patroni | Delete member key from Patroni DCS
       ansible.builtin.shell: >-
         ETCDCTL_API=3 etcdctl del /service/{{ patroni_cluster_name }}/members/{{ ansible_facts['hostname'] }}

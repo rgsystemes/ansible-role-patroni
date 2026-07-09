@@ -103,6 +103,8 @@
         group: postgres
         mode: '0640'
       delegate_to: "{{ item }}"
+      vars:
+        ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
       loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
       register: patroni_etcd_updated
 

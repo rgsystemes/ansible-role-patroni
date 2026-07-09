@@ -18,3 +18,6 @@
       ansible.builtin.debug:
         msg: "Patroni DCS key for '{{ ansible_facts['hostname'] }}' was already absent."
       when: etcd_del_result.stdout | int == 0
+
+    - name: Patroni | Shutdown the machine
+      community.general.shutdown:

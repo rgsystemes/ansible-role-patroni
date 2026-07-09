@@ -60,7 +60,7 @@
 
     - name: Etcd | Add a member to etcd cluster
       ansible.builtin.shell: |
-        etcdctl member add {{ ansible_facts['hostname'] }} http://{{ ansible_default_ipv4.address }}:2380
+        etcdctl member add {{ ansible_facts['hostname'] }} --peer-urls=http://{{ ansible_default_ipv4.address }}:2380
       delegate_to: "{{ groups['patroni'][0] }}"
 
     - name: Etcd | Propagate updated etcd.conf to existing nodes

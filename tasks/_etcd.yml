@@ -18,6 +18,15 @@
     mode: '0750'
   tags: etcd
 
+- name: Etcd | Gather facts from existing nodes to get their IPs
+  ansible.builtin.setup:
+    gather_subset: ['network']
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+  when: patroni_new_node | bool
+  tags: etcd
+
 - name: Etcd | Generate conf files
   ansible.builtin.template:
     src: "{{ item.src }}"

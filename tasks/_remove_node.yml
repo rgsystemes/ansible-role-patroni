@@ -1,23 +1,62 @@
 ---
-- name: Remove node | Remove Patroni DCS key from etcd
+- name: Patroni | Stop Patroni service on the node to remove
+  ansible.builtin.systemd:
+    name: patroni
+    state: stopped
+  tags: patroni
+
+- name: Etcd | Remove etcd member from cluster
+  tags: etcd
+  block:
+    - name: Etcd | Get etcd member ID of node to remove
+      ansible.builtin.shell: >-
+        etcdctl member list | awk '$2 == "name={{ ansible_facts["hostname"] }}" {gsub(/:/, "", $1); print $1}'
+      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
+      register: etcd_member_id
+      changed_when: false
+      failed_when: false
+
+    - name: Etcd | Remove member from etcd cluster
+      ansible.builtin.shell: >-
+        etcdctl member remove {{ etcd_member_id.stdout | trim }}
+      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
+      when: etcd_member_id.stdout | trim | length > 0
+
+    - name: Etcd | Etcd member not found (already removed)
+      ansible.builtin.debug:
+        msg: "Etcd member '{{ ansible_facts['hostname'] }}' not found in member list, skipping removal."
+      when: etcd_member_id.stdout | trim | length == 0
+
+- name: Etcd | Delete member key from Patroni DCS
+  ansible.builtin.shell: >-
+    ETCDCTL_API=3 etcdctl del /service/{{ patroni_cluster_name }}/members/{{ ansible_facts['hostname'] }}
+  delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
+  register: etcd_del_result
+  changed_when: etcd_del_result.stdout | int > 0
+  tags: etcd
+
+- name: Patroni | Update patroni.yml on remaining nodes after removal
   tags: patroni
   block:
-    - name: Patroni | Stop Patroni service
+    - name: Patroni | Propagate updated patroni.yml to remaining nodes
+      ansible.builtin.template:
+        src: patroni.yml.j2
+        dest: "{{ patroni_conf_dir }}/patroni.yml"
+        owner: postgres
+        group: postgres
+        mode: '0640'
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: patroni_conf_updated
+
+    - name: Patroni | Reload Patroni on remaining nodes where conf changed
       ansible.builtin.systemd:
         name: patroni
-        state: stopped
+        state: reloaded
+      delegate_to: "{{ item.item }}"
+      loop: "{{ patroni_conf_updated.results }}"
+      when: item.changed
 
-    - name: Patroni | Delete member key from Patroni DCS
-      ansible.builtin.shell: >-
-        ETCDCTL_API=3 etcdctl del /service/{{ patroni_cluster_name }}/members/{{ ansible_facts['hostname'] }}
-      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
-      register: etcd_del_result
-      changed_when: etcd_del_result.stdout | int > 0
-
-    - name: Patroni | DCS key not found (already removed)
-      ansible.builtin.debug:
-        msg: "Patroni DCS key for '{{ ansible_facts['hostname'] }}' was already absent."
-      when: etcd_del_result.stdout | int == 0
-
-    - name: Patroni | Shutdown the machine
-      community.general.shutdown:
+- name: Remove node | Shutdown the machine
+  community.general.shutdown:
+  tags: patroni

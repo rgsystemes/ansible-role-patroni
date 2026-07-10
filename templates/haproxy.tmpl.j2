@@ -22,7 +22,9 @@ defaults
 listen stats
     mode http
     bind {{ ansible_facts['default_ipv4']['address'] }}:{{ haproxy_listen_port.stats }}
+{% if ansible_facts['distribution_release'] != 'trixie' %}
     option http-use-htx
+{% endif %}
     http-request use-service prometheus-exporter if { path /metrics }
     stats enable
     stats uri /

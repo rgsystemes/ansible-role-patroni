@@ -52,6 +52,31 @@
         name: haproxy_t
         permissive: true
 
+- name: HAProxy | Propagate updated haproxy.cfg to existing nodes when adding a new node
+  when: patroni_new_node | bool
+  tags: haproxy
+  block:
+    - name: HAProxy | Update haproxy.cfg on existing cluster nodes
+      ansible.builtin.template:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: "{{ item }}"
+      vars:
+        ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: haproxy_propagate
+
+    - name: HAProxy | Reload service on nodes where configuration changed
+      ansible.builtin.systemd:
+        name: haproxy
+        state: reloaded
+      delegate_to: "{{ item.item }}"
+      loop: "{{ haproxy_propagate.results }}"
+      when: item.changed
+
 - name: HAProxy | Update log rotation with logrotate
   ansible.builtin.copy:
     src: haproxy.logrotate

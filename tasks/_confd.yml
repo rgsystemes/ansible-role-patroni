@@ -52,3 +52,26 @@
 
 - name: Confd | Flush handlers to restart confd service
   ansible.builtin.meta: flush_handlers
+
+- name: Confd | Propagate updated confd.toml to existing nodes when adding a new node
+  when: patroni_new_node | bool
+  tags: confd
+  block:
+    - name: Confd | Update confd.toml on existing cluster nodes
+      ansible.builtin.template:
+        src: confd.toml.j2
+        dest: /etc/confd/confd.toml
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: confd_propagate
+
+    - name: Confd | Restart service on nodes where configuration changed
+      ansible.builtin.systemd:
+        name: confd
+        state: restarted
+      delegate_to: "{{ item.item }}"
+      loop: "{{ confd_propagate.results }}"
+      when: item.changed

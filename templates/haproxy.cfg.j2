@@ -46,12 +46,12 @@ listen master
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 4 on-marked-down shutdown-sessions
 {% if pgbouncer_install | bool %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
 {% endfor %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install | bool ) %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
   {% endfor %}
 {% endif %}
@@ -74,12 +74,12 @@ listen replicas
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install | bool %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
   {% endfor %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install | bool ) %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
   {% endfor %}
 {% endif %}
@@ -102,12 +102,12 @@ listen replicas_sync
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install | bool %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
   {% endfor %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install | bool ) %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
   {% endfor %}
 {% endif %}
@@ -130,13 +130,13 @@ listen replicas_async
     http-check expect status 200
     default-server inter 3s fastinter 1s fall 3 rise 2 on-marked-down shutdown-sessions
 {% if pgbouncer_install | bool %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ pgbouncer_listen_port }} check port {{ patroni_restapi_port }}
   {% endfor %}
   {% else %}
 {% endif %}
 {% if ( pgbouncer_install is not defined ) or ( not pgbouncer_install | bool ) %}
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
 server {{ hostvars[host]['ansible_hostname'] | default(hostvars[host]['inventory_hostname']) }} {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}:{{ postgresql_port }} check port {{ patroni_restapi_port }}
   {% endfor %}
 {% endif %}

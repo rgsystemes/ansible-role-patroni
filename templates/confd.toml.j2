@@ -2,7 +2,7 @@ backend = "etcdv3"
 interval = 10
 watch = true
 nodes = [
-{% for host in groups['patroni'] %}
+{% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
   "http://{{ hostvars[host]['ansible_default_ipv4']['address'] }}:2379",
 {% endfor %}
 ]

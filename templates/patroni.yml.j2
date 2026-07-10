@@ -25,7 +25,7 @@ restapi:
   connect_address: {{ ansible_facts['default_ipv4']['address'] }}:{{ patroni_restapi_port }}
 
 etcd3:
-  hosts: {% for host in groups['patroni'] %}{{ hostvars[host]['ansible_default_ipv4']['address'] }}:2379{% if not loop.last %},{% endif %}{% endfor %}
+  hosts: {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}{{ hostvars[host]['ansible_default_ipv4']['address'] }}:2379{% if not loop.last %},{% endif %}{% endfor %}
 
 bootstrap:
   method: {{ patroni_cluster_bootstrap_method }}

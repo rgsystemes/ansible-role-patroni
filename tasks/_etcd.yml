@@ -71,6 +71,8 @@
         group: root
         mode: '0644'
       delegate_to: "{{ item }}"
+      vars:
+        ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
       loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
 
 - name: Etcd | Enable and start etcd service

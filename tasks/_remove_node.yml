@@ -10,7 +10,7 @@
   block:
     - name: Etcd | Get member ID of the node being removed
       ansible.builtin.shell: >-
-        etcdctl member list | awk '$2 == "name={{ ansible_facts["hostname"] }}" {gsub(/:/, "", $1); print $1}'
+        etcdctl member list | awk '$2 == "name={{ ansible_facts['hostname'] }}" {gsub(/:/, "", $1); print $1}'
       delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
       register: etcd_member_id
       changed_when: false
@@ -42,6 +42,9 @@
     group: root
     mode: '0644'
   delegate_to: "{{ item }}"
+  vars:
+    ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
+    patroni_excluded_node: "{{ inventory_hostname }}"
   loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
 
 - name: PostgreSQL | Propagate updated pg_hba.conf to remaining nodes
@@ -62,6 +65,8 @@
         group: postgres
         mode: '0640'
       delegate_to: "{{ item }}"
+      vars:
+        patroni_excluded_node: "{{ inventory_hostname }}"
       loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
       register: pg_hba_propagate
 
@@ -78,6 +83,7 @@
       delegate_to: "{{ item }}"
       vars:
         ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
+        patroni_excluded_node: "{{ inventory_hostname }}"
       loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
       register: patroni_conf_updated
 

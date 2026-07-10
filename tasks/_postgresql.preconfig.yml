@@ -140,7 +140,7 @@
           ansible.builtin.command: "/usr/bin/pg_ctlcluster {{ postgresql_version }} {{ postgresql_cluster_name }} start"
           register: pg_start_on_master
           when: pg_ctl_status_result.rc == 3 and
-                postgresql_packages|join(" ") is not search("postgrespro")
+                postgresql_packages| join(" ") is not search("postgrespro")
 
         - name: PostgreSQL | check PostgreSQL is accepting connections
           become: true

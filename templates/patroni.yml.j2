@@ -7,17 +7,17 @@ namespace: /service/
 
 {% if patroni_log_destination == 'logfile' %}
 log:
-  level: {{ patroni_log_level |upper }}
-  traceback_level: {{ patroni_log_traceback_level |upper }}
-  format: {{ patroni_log_format |quote }}
-  dateformat: {{ patroni_log_dateformat |quote }}
-  max_queue_size: {{ patroni_log_max_queue_size |int }}
+  level: {{ patroni_log_level | upper }}
+  traceback_level: {{ patroni_log_traceback_level | upper }}
+  format: {{ patroni_log_format | quote }}
+  dateformat: {{ patroni_log_dateformat | quote }}
+  max_queue_size: {{ patroni_log_max_queue_size | int }}
   dir: {{ patroni_log_dir }}
-  file_num: {{ patroni_log_file_num |int }}
-  file_size: {{ patroni_log_file_size |int }}
+  file_num: {{ patroni_log_file_num | int }}
+  file_size: {{ patroni_log_file_size | int }}
   loggers:
-    patroni.postmaster: {{ patroni_log_loggers_patroni_postmaster |upper }}
-    urllib3: {{ patroni_log_loggers_urllib3 |upper }}
+    patroni.postmaster: {{ patroni_log_loggers_patroni_postmaster | upper }}
+    urllib3: {{ patroni_log_loggers_urllib3 | upper }}
 {% endif %}
 
 restapi:
@@ -30,16 +30,16 @@ etcd3:
 bootstrap:
   method: {{ patroni_cluster_bootstrap_method }}
   dcs:
-    ttl: {{ patroni_ttl |d(30, true) |int }}
-    loop_wait: {{ patroni_loop_wait |d(10, true) |int }}
-    retry_timeout: {{ patroni_retry_timeout |d(10, true) |int }}
-    maximum_lag_on_failover: {{ patroni_maximum_lag_on_failover |d(1048576, true) |int }}
-    master_start_timeout: {{ patroni_master_start_timeout |d(300, true) |int }}
-    synchronous_mode: {{ synchronous_mode |string |d(false, true) |lower }}
-    synchronous_mode_strict: {{ synchronous_mode_strict |string |d(false, true) |lower }}
-    synchronous_node_count: {{ synchronous_node_count |d(1, true) |int }}
+    ttl: {{ patroni_ttl | d(30, true) | int }}
+    loop_wait: {{ patroni_loop_wait | d(10, true) | int }}
+    retry_timeout: {{ patroni_retry_timeout | d(10, true) | int }}
+    maximum_lag_on_failover: {{ patroni_maximum_lag_on_failover | d(1048576, true) | int }}
+    master_start_timeout: {{ patroni_master_start_timeout | d(300, true) | int }}
+    synchronous_mode: {{ synchronous_mode | string | d(false, true) | lower }}
+    synchronous_mode_strict: {{ synchronous_mode_strict | string | d(false, true) | lower }}
+    synchronous_node_count: {{ synchronous_node_count | d(1, true) | int }}
     postgresql:
-      use_pg_rewind: {{ patroni_postgresql_use_pg_rewind |string |d(false, true) |lower }}
+      use_pg_rewind: {{ patroni_postgresql_use_pg_rewind | string | d(false, true) | lower }}
       use_slots: true
       parameters:
       {% for parameter in postgresql_parameters %}
@@ -113,8 +113,8 @@ postgresql:
   {% endfor %}
 {% endif %}
 
-  remove_data_directory_on_rewind_failure: {{ patroni_remove_data_directory_on_rewind_failure |string |d(false, true) |lower }}
-  remove_data_directory_on_diverged_timelines: {{ patroni_remove_data_directory_on_diverged_timelines |string |d(false, true) |lower }}
+  remove_data_directory_on_rewind_failure: {{ patroni_remove_data_directory_on_rewind_failure | string | d(false, true) | lower }}
+  remove_data_directory_on_diverged_timelines: {{ patroni_remove_data_directory_on_diverged_timelines | string | d(false, true) | lower }}
 
 {% if patroni_callbacks is defined and patroni_callbacks | length > 0 %}
   callbacks:

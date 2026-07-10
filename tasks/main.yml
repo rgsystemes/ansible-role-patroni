@@ -2,7 +2,7 @@
 - name: Patroni | Remove node from cluster
   ansible.builtin.include_tasks: _remove_node.yml
   when: patroni_remove_node | bool
-  tags: ['etcd', 'patroni','postgresql','info']
+  tags: ['etcd', 'patroni', 'postgresql', 'info']
 
 - name: Hostname | Upgrade hostname
   ansible.builtin.include_tasks: _hostname.yml

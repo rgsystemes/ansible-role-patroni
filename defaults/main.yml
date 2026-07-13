@@ -27,7 +27,7 @@ sysctl_conf:
 # Per-release package versions — empty string means "latest available"
 _haproxy_versions:
   bullseye: "2.2.9-2+deb11u7"
-  trixie: "3.0.11-1+deb13u2"
+  trixie: "3.0.11-1+deb13u3"
 
 _keepalived_versions:
   bullseye: "1:2.1.5-0.2+deb11u1"

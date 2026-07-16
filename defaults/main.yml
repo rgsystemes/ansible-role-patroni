@@ -27,7 +27,7 @@ sysctl_conf:
 # Per-release package versions — empty string means "latest available"
 _haproxy_versions:
   bullseye: "2.2.9-2+deb11u7"
-  trixie: "3.0.11-1+deb13u2"
+  trixie: "3.0.11-1+deb13u3"
 
 _keepalived_versions:
   bullseye: "1:2.1.5-0.2+deb11u1"
@@ -270,6 +270,8 @@ pgbouncer_query_wait_timeout: 120
 
 # Patroni variables
 patroni_new_node: false
+patroni_remove_node: false
+patroni_excluded_node: ""
 patroni_cluster_name: "postgres-cluster"
 patroni_cluster_bootstrap_method: "initdb"
 patroni_install_version: "3.0.2"
@@ -293,7 +295,6 @@ patroni_log_file_size: 25000000  # bytes
 patroni_log_loggers_patroni_postmaster: warning
 patroni_log_loggers_urllib3: warning
 
-patroni_etcd_hosts: []
 patroni_restapi_port: 8008
 patroni_ttl: 30
 patroni_loop_wait: 10

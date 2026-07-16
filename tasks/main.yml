@@ -1,23 +1,31 @@
 ---
+- name: Patroni | Remove node from cluster
+  ansible.builtin.include_tasks: _remove_node.yml
+  when: patroni_remove_node | bool
+  tags: ['etcd', 'patroni', 'postgresql', 'info']
+
 - name: Hostname | Upgrade hostname
   ansible.builtin.include_tasks: _hostname.yml
-  when: not lab
+  when: not lab and not patroni_remove_node | bool
   tags: ['hostname', 'etcd']
 
 - name: Apt | Install packages
   ansible.builtin.include_tasks: _apt.yml
+  when: not patroni_remove_node | bool
   tags: ['apt', 'etcd']
 
 - name: Sysctl | Manage Sysctl
   ansible.builtin.include_tasks: _sysctl.yml
+  when: not patroni_remove_node | bool
   tags: ['sysctl', 'etcd']
 
 - name: Etcd cluster | Install etcd
   ansible.builtin.include_tasks: _etcd.yml
-  when: not dcs_exists | bool
+  when: not dcs_exists | bool and not patroni_remove_node | bool
   tags: etcd
 
 - name: PostgreSQL cluster | Install PostgreSQL cluster
+  when: not patroni_remove_node | bool
   tags: ['postgresql', 'swap', 'thp', 'pam', 'ioscheduler', 'locales', 'ssh']
   block:
     - name: PostgreSQL | Install PosgreSQL
@@ -49,6 +57,7 @@
       tags: ssh
 
 - name: Balancers cluster | Install PostgreSQL cluster
+  when: not patroni_remove_node | bool
   tags: ['haproxy', 'confd', 'keepalived', 'exporter']
   block:
     - name: HAProxy | Install HAProxy
@@ -66,6 +75,7 @@
       tags: keepalived
 
 - name: PostgreSQL cluster | Install Patroni/PGBouncer cluster
+  when: not patroni_remove_node | bool
   tags: ['pgbouncer', 'postgresql', 'patroni', 'exporter']
   block:
     - name: PGBouncer | Install PGBouncer
@@ -90,4 +100,5 @@
 
 - name: Info | Get informations of cluster
   ansible.builtin.include_tasks: _info.yml
+  when: not patroni_remove_node | bool
   tags: info

@@ -15,7 +15,16 @@
     state: directory
     owner: root
     group: root
-    mode: 0750
+    mode: '0750'
+  tags: etcd
+
+- name: Etcd | Gather facts from existing nodes to get their IPs
+  ansible.builtin.setup:
+    gather_subset: ['network']
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+  when: patroni_new_node | bool
   tags: etcd
 
 - name: Etcd | Generate conf files
@@ -24,7 +33,7 @@
     dest: "{{ item.dest }}"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   loop:
     - src: etcd.conf.j2
       dest: /etc/etcd/etcd.conf
@@ -51,8 +60,20 @@
 
     - name: Etcd | Add a member to etcd cluster
       ansible.builtin.shell: |
-        etcdctl member add {{ ansible_facts['hostname'] }} http://{{ ansible_default_ipv4.address }}:2380
+        etcdctl member add {{ ansible_facts['hostname'] }} --peer-urls=http://{{ ansible_default_ipv4.address }}:2380
       delegate_to: "{{ groups['patroni'][0] }}"
+
+    - name: Etcd | Propagate updated etcd.conf to existing nodes
+      ansible.builtin.template:
+        src: etcd.conf.j2
+        dest: /etc/etcd/etcd.conf
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: "{{ item }}"
+      vars:
+        ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
 
 - name: Etcd | Enable and start etcd service
   ansible.builtin.systemd:
@@ -73,6 +94,7 @@
   tags: etcd
 
 - name: Etcd | Check etcd cluster health
+  tags: etcd
   block:
     - name: Etcd | Wait until the etcd cluster is healthy
       ansible.builtin.shell: |
@@ -93,4 +115,3 @@
         etcdctl member list
       delegate_to: "{{ groups.patroni[0] }}"
       changed_when: false
-  tags: etcd

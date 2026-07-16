@@ -3,7 +3,7 @@
   ansible.builtin.get_url:
     url: "{{ item }}"
     dest: /usr/local/bin/confd
-    mode: 0755
+    mode: '0755'
     timeout: 60
     validate_certs: false
   loop:
@@ -17,7 +17,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0755
+    mode: '0755'
   loop:
     - /etc/confd/conf.d
     - /etc/confd/templates
@@ -29,7 +29,7 @@
     dest: "{{ item.dest }}"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: restart confd
   loop:
     - src: confd.toml.j2
@@ -46,8 +46,32 @@
     dest: /etc/systemd/system/confd.service
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: restart confd
   tags: confd
 
-- ansible.builtin.meta: flush_handlers
+- name: Confd | Flush handlers to restart confd service
+  ansible.builtin.meta: flush_handlers
+
+- name: Confd | Propagate updated confd.toml to existing nodes when adding a new node
+  when: patroni_new_node | bool
+  tags: confd
+  block:
+    - name: Confd | Update confd.toml on existing cluster nodes
+      ansible.builtin.template:
+        src: confd.toml.j2
+        dest: /etc/confd/confd.toml
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: confd_propagate
+
+    - name: Confd | Restart service on nodes where configuration changed
+      ansible.builtin.systemd:
+        name: confd
+        state: restarted
+      delegate_to: "{{ item.item }}"
+      loop: "{{ confd_propagate.results }}"
+      when: item.changed

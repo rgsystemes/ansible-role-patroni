@@ -5,7 +5,7 @@
     dest: /etc/systemd/system/disable-transparent-huge-pages.service
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: restart disable-thp
   when: (disable_thp is defined and disable_thp | bool)
   tags: thp

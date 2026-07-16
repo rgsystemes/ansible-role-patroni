@@ -85,14 +85,14 @@
 
 # TYPE      DATABASE                 USER                     ADDRESS                  METHOD
 {% for client in postgresql_pg_hba %}
-  {{ client.type.ljust(10) |default('host') }}{{ client.database.ljust(25) |default('all') }}{{ client.user.ljust(25) |default('all') }}{{ client.address.ljust(25) |default('') }}{{ client.method |default('md5') }} {{ client.options |default(None) }}
+  {{ client.type.ljust(10) | default('host') }}{{ client.database.ljust(25) | default('all') }}{{ client.user.ljust(25) | default('all') }}{{ client.address.ljust(25) | default('') }}{{ client.method | default('md5') }}{{ (' ' ~ client.options) if client.options is defined and client.options | length > 0 else '' }}
 {% endfor %}
-  {% for host in groups['patroni'] %}
-  host      all                      all                      {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}/32         {{ postgresql_password_encryption_algorithm }}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
+  host      all                      all                      {{ hostvars[host]['ansible_default_ipv4']['address'] }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}
 # Allow replication connections from localhost, by a user with the
 # replication privilege.
   host      replication              {{ patroni_replication_username }}               localhost                trust
-  {% for host in groups['patroni'] %}
+  {% for host in groups['patroni'] | reject('equalto', patroni_excluded_node) | list %}
   host      replication              {{ patroni_replication_username }}               {{ hostvars[host]['ansible_default_ipv4']['address'] | default(hostvars[host]['ansible_host'] | default(host)) }}/32         {{ postgresql_password_encryption_algorithm }}
   {% endfor %}

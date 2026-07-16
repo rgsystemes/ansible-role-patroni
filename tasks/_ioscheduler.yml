@@ -5,7 +5,7 @@
     dest: /etc/systemd/system/io-scheduler.service
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: restart io-scheduler
   when: set_scheduler is defined and set_scheduler | bool
   tags: ioscheduler

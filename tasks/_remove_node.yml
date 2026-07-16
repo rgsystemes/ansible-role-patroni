@@ -1,0 +1,153 @@
+---
+- name: Patroni | Stop service on the node being removed
+  ansible.builtin.systemd:
+    name: patroni
+    state: stopped
+  tags: patroni
+
+- name: Etcd | Remove node from etcd cluster
+  tags: etcd
+  block:
+    - name: Etcd | Get member ID of the node being removed
+      ansible.builtin.shell: >-
+        ETCDCTL_API=3 etcdctl member list | awk -F', ' '$3 == "{{ ansible_facts['hostname'] }}" {print $1}'
+      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
+      register: etcd_member_id
+      changed_when: false
+      failed_when: false
+
+    - name: Etcd | Remove member from cluster
+      ansible.builtin.shell: >-
+        etcdctl member remove {{ etcd_member_id.stdout | trim }}
+      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
+      when: etcd_member_id.stdout | trim | length > 0
+
+    - name: Etcd | Skip removal (member already absent)
+      ansible.builtin.debug:
+        msg: "Etcd member '{{ ansible_facts['hostname'] }}' not found, skipping removal."
+      when: etcd_member_id.stdout | trim | length == 0
+
+    - name: Etcd | Delete Patroni DCS key for the removed node
+      ansible.builtin.shell: >-
+        ETCDCTL_API=3 etcdctl del /service/{{ patroni_cluster_name }}/members/{{ ansible_facts['hostname'] }}
+      delegate_to: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | first }}"
+      register: etcd_del_result
+      changed_when: etcd_del_result.stdout | int > 0
+
+- name: Etcd | Propagate updated etcd.conf to remaining nodes
+  ansible.builtin.template:
+    src: etcd.conf.j2
+    dest: /etc/etcd/etcd.conf
+    owner: root
+    group: root
+    mode: '0644'
+  delegate_to: "{{ item }}"
+  vars:
+    ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
+    patroni_excluded_node: "{{ inventory_hostname }}"
+  loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+
+- name: Confd | Propagate updated confd.toml to remaining nodes
+  tags: confd
+  block:
+    - name: Confd | Update confd.toml on remaining nodes
+      ansible.builtin.template:
+        src: confd.toml.j2
+        dest: /etc/confd/confd.toml
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: "{{ item }}"
+      vars:
+        patroni_excluded_node: "{{ inventory_hostname }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: confd_updated
+
+    - name: Confd | Restart service on nodes where configuration changed
+      ansible.builtin.systemd:
+        name: confd
+        state: restarted
+      delegate_to: "{{ item.item }}"
+      loop: "{{ confd_updated.results }}"
+      when: item.changed
+
+- name: HAProxy | Propagate updated haproxy.cfg to remaining nodes
+  tags: haproxy
+  block:
+    - name: HAProxy | Update haproxy.cfg on remaining nodes
+      ansible.builtin.template:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: "{{ item }}"
+      vars:
+        ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
+        patroni_excluded_node: "{{ inventory_hostname }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: haproxy_updated
+
+    - name: HAProxy | Reload service on nodes where configuration changed
+      ansible.builtin.systemd:
+        name: haproxy
+        state: reloaded
+      delegate_to: "{{ item.item }}"
+      loop: "{{ haproxy_updated.results }}"
+      when: item.changed
+
+- name: PostgreSQL | Propagate updated pg_hba.conf to remaining nodes
+  tags: patroni
+  block:
+    - name: PostgreSQL | Gather facts from remaining nodes
+      ansible.builtin.setup:
+        gather_subset: ['network']
+      delegate_to: "{{ item }}"
+      delegate_facts: true
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+
+    - name: PostgreSQL | Update pg_hba.conf on remaining nodes
+      ansible.builtin.template:
+        src: pg_hba.conf.j2
+        dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+        owner: postgres
+        group: postgres
+        mode: '0640'
+      delegate_to: "{{ item }}"
+      vars:
+        patroni_excluded_node: "{{ inventory_hostname }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: pg_hba_propagate
+
+- name: Patroni | Propagate updated patroni.yml to remaining nodes
+  tags: patroni
+  block:
+    - name: Patroni | Update patroni.yml on remaining nodes
+      ansible.builtin.template:
+        src: patroni.yml.j2
+        dest: "{{ patroni_conf_dir }}/patroni.yml"
+        owner: postgres
+        group: postgres
+        mode: '0640'
+      delegate_to: "{{ item }}"
+      vars:
+        ansible_facts: "{{ hostvars[item]['ansible_facts'] }}"
+        patroni_excluded_node: "{{ inventory_hostname }}"
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+      register: patroni_conf_updated
+
+    - name: Patroni | Reload service on nodes where configuration changed
+      ansible.builtin.systemd:
+        name: patroni
+        state: reloaded
+      delegate_to: "{{ item.item }}"
+      loop: "{{ patroni_conf_updated.results }}"
+      when: item.changed
+
+- name: Info | Get informations of cluster
+  ansible.builtin.include_tasks: _info.yml
+  tags: info
+
+- name: Remove node | Shutdown the machine
+  community.general.shutdown:
+  tags: patroni

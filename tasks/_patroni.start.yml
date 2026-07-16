@@ -49,7 +49,7 @@
         dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
         owner: postgres
         group: postgres
-        mode: 0640
+        mode: '0640'
       register: generate_pg_hba
       when: (is_master is defined and is_master | bool) or
             ((is_master is undefined and postgresql_conf_dir != postgresql_data_dir)
@@ -68,13 +68,20 @@
   when: patroni_new_node | bool
   tags: patroni
   block:
+    - name: PostgreSQL | Gather facts from existing nodes to get their IPs
+      ansible.builtin.setup:
+        gather_subset: ['network']
+      delegate_to: "{{ item }}"
+      delegate_facts: true
+      loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
+
     - name: PostgreSQL | Update pg_hba.conf on existing cluster nodes
       ansible.builtin.template:
         src: pg_hba.conf.j2
         dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
         owner: postgres
         group: postgres
-        mode: 0640
+        mode: '0640'
       delegate_to: "{{ item }}"
       loop: "{{ groups['patroni'] | reject('equalto', inventory_hostname) | list }}"
       register: pg_hba_propagate
@@ -132,7 +139,7 @@
         content: "manual"
         owner: postgres
         group: postgres
-        mode: 0644
+        mode: '0644'
 
     - name: PostgreSQL | Disable "postgresql@{{ postgresql_version }}-{{ postgresql_cluster_name }}" service
       ansible.builtin.systemd:
